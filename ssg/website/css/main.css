@@ -1,0 +1,28 @@
+:root {
+    font-family: Helvetica, sans-serif;
+    --column-width: 50em;
+    --main-margin: 1em;
+}
+
+body {
+    margin: var(--main-margin);
+}
+
+article {
+    max-width: var(--column-width);
+    margin: auto;
+}
+
+article h1 {
+    text-align: center;
+}
+
+article p {
+    text-align: left;
+}
+
+@media (min-width: 500px) {
+    article p {
+        text-align: center;
+    }
+}  
