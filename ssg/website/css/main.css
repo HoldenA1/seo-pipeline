@@ -20,9 +20,3 @@ article h1 {
 article p {
     text-align: left;
 }
-
-@media (min-width: 500px) {
-    article p {
-        text-align: center;
-    }
-}  
