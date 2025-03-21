@@ -17,19 +17,23 @@ os.makedirs("website", exist_ok=True)
 
 # Generate HTML files
 for article in articles:
-    info = '</p><p>'.join(article["DetailedInformation"].split('\n'))
-
+    # Generate article html
     html_content = template.render(
         seo=article["SEOMetaDescription"],
         title=article["Title"],
         placeName=article["PlaceName"],
         generalSummary=article["Summary"],
         rating=article["Rating"],
-        reviewsSummary=article["ReviewsSummary"],
+        reviewsCount=article["ReviewsCount"],
+        reviewsSummary='</p><p>'.join(article["ReviewsSummary"].split('\n')),
         reviews=article["SampleReviews"],
-        detailedInformation=info,
+        detailedInformation=article["DetailedInformation"],
         formattedAddress=article["FormattedAddress"],
-        locationWebsite=article["WebsiteURL"]
+        locationWebsite=article["WebsiteURL"],
+        city=article["City"],
+        sources=article["Sources"],
+        images=article["Images"],
+        slug=article["Slug"]
     )
 
     with open(f"{DIR_NAME}/{article["Slug"]}.html", "w") as f:

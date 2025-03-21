@@ -20,3 +20,107 @@ article h1 {
 article p {
     text-align: left;
 }
+
+#sample-reviews {
+    display: flex;
+    gap: 10px;
+    overflow-x: scroll;
+    scroll-snap-type: x mandatory;
+    padding: 25px 0px;
+}
+
+review-card {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+    padding: 20px;
+    background: var(--white);
+    box-sizing: border-box;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 15%);
+}
+
+@media (min-width: 700px) {
+    review-card {
+        flex-basis: calc(50% - 10px);
+    }
+}
+
+#image-gallery {
+    position: relative;
+}
+
+/* Hide the images by default */
+.my-slides {
+    display: none;
+    position: relative;
+    height: 400px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    background-color: lightgray;
+}
+
+@media (max-width: 500px) {
+    .my-slides {
+        height: 200px;
+    }
+}
+
+.my-slides img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Ensures aspect ratio is maintained */
+}
+  
+/* Next & previous buttons */
+.prev, .next {
+    cursor: pointer;
+    position: absolute;
+    top: 50%;
+    transform: translate(0, -50%);
+    width: auto;
+    padding: 16px;
+    color: white;
+    font-weight: bold;
+    font-size: 18px;
+    transition: 0.6s ease;
+    border-radius: 0 3px 3px 0;
+    user-select: none;
+}
+
+/* Position the "next button" to the right */
+.next {
+    right: 0;
+    border-radius: 3px 0 0 3px;
+}
+
+.prev:hover, .next:hover {
+    background-color: rgba(0,0,0,0.8);
+}
+
+.numbertext {
+    color: #f2f2f2;
+    font-size: 12px;
+    padding: 8px 12px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    background-color: rgba(0,0,0,0.8);
+    border-bottom-right-radius: 3px;
+    z-index: 10;
+}
+
+.active {
+    background-color: #717171;
+}
+
+.fade {
+    animation-name: fade;
+    animation-duration: 1.5s;
+}
+
+@keyframes fade {
+    from {opacity: .4}
+    to {opacity: 1}
+}
