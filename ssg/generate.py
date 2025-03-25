@@ -17,11 +17,25 @@ os.makedirs("website", exist_ok=True)
 
 # Generate HTML files
 for article in articles:
+    if article["Slug"] == "": continue # ignore empty entries for now
+
+    # You can only loop a list in jinja so I turned the rating into a list
+    for review in article["SampleReviews"]:
+        rating = review["rating"]
+        review["rating"] = []
+        for i in range(5):
+            # We use these to choose which color to make the star
+            if rating > i:
+                review["rating"].append("#ffbb29")
+            else:
+                review["rating"].append("grey")
+
     # Generate article html
     html_content = template.render(
         seo=article["SEOMetaDescription"],
         title=article["Title"],
         placeName=article["PlaceName"],
+        placeID=article["PlaceID"],
         generalSummary=article["Summary"],
         rating=article["Rating"],
         reviewsCount=article["ReviewsCount"],

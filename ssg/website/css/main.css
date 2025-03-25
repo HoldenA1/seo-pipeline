@@ -124,3 +124,43 @@ review-card {
     from {opacity: .4}
     to {opacity: 1}
 }
+
+#source ul {
+    overflow: hidden;
+}
+
+review-card {
+    overflow-y: scroll;
+    max-height: 400px;
+}
+
+review-card img {
+    height: 40px;
+    width: 40px;
+}
+
+review-card h4 {
+    display: inline;
+    vertical-align: top;
+    font-weight: 400;
+    margin: 0 10px;
+}
+
+review-card a {
+    text-decoration: none;
+    color: black;
+}
+
+review-card a:hover {
+    text-decoration: underline;
+}
+
+stars-widget {
+    display: block;
+    font-size: 1.2em;
+}
+
+#contact iframe {
+    width: 100%;
+    aspect-ratio: 1/1;
+}

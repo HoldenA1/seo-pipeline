@@ -29,7 +29,7 @@
             <script src="./js/slideshow.js"></script>
 
             <section id="summary">
-                <h2>Why {{ placeName }} is a fun option when searching for things to do near me with firends and family</h3>
+                <h2>Why {{ placeName }} is a fun option when searching for things to do near me with friends and family</h3>
                 <p>{{ generalSummary }}</p>
             </section>
 
@@ -44,7 +44,11 @@
                         <img src="{{ item.authorPhotoURL }}" alt="profile photo of user">
                         <h4><a href="{{ item.authorProfileURL }}">{{ item.authorName }}</a></h4>
                         <time datetime="{{ item.timePublished }}"></time>
-                        <stars-widget>{{ item.rating }}</stars-widget>
+                        <stars-widget>
+                        {% for star in item.rating %}
+                            <span style="color: {{ star }};">&#9733;</span>
+                        {% endfor %}
+                        </stars-widget>
                         <p>{{ item.review }}</p>
                     </review-card>
                 {% endfor %}
@@ -55,8 +59,14 @@
                 <h2>How to reach {{ placeName }}</h3>
                 <address>
                     <p>{{ formattedAddress }}</p>
-                    <a href="https://{{ locationWebsite }}">{{ locationWebsite }}</a>
+                    <p>Website: <a href="https://{{ locationWebsite }}">{{ locationWebsite }}</a></p>
                 </address>
+                <iframe
+                    frameborder="0" style="border:0"
+                    referrerpolicy="no-referrer-when-downgrade"
+                    src="https://www.google.com/maps/embed/v1/place?key=AIzaSyA1T7aadTWQceTPGgtSVXHClUml-8hbTDc&q=place_id:{{ placeID }}"
+                    allowfullscreen>
+                </iframe>
             </section>
 
             <section id="activities">
