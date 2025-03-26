@@ -20,7 +20,7 @@
                 {% for image in images %}
                     <div class="my-slides">
                         <div class="numbertext">{{ loop.index }} / {{ loop.length }}</div>
-                        <img class="fade" src="./assets/{{ slug }}/{{ image }}">
+                        <img class="fade" src="//localhost:1337{{ image }}">
                     </div>
                 {% endfor %}
                 <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
@@ -34,22 +34,22 @@
             </section>
 
             <section id="ratings">
-                <h2>Here's what people think of {{ placeName }}</h3>
+                <h2>Here's what people think of {{ placeName }}</h2>
                 <p>As of recent, {{ placeName }} holds a {{ rating }}-star rating based on {{ reviewsCount }} reviews.</ratings-widget>
                 <p>{{ reviewsSummary }}</p>
-                <h3>Highlights from reviewers</h3>
+                <h3>Highlights from reviewers <span>(Most Relevant)</span></h3>
                 <div id="sample-reviews">
                 {% for item in reviews %}
                     <review-card>
-                        <img src="{{ item.authorPhotoURL }}" alt="profile photo of user">
-                        <h4><a href="{{ item.authorProfileURL }}">{{ item.authorName }}</a></h4>
-                        <time datetime="{{ item.timePublished }}"></time>
+                        <img src="{{ item.AuthorPhotoURL }}" alt="profile photo of user">
+                        <h4><a href="{{ item.AuthorProfileURL }}">{{ item.AuthorName }}</a></h4>
+                        <time datetime="{{ item.TimePublished }}"></time>
                         <stars-widget>
-                        {% for star in item.rating %}
+                        {% for star in item.Stars %}
                             <span style="color: {{ star }};">&#9733;</span>
                         {% endfor %}
                         </stars-widget>
-                        <p>{{ item.review }}</p>
+                        <p>{{ item.Review }}</p>
                     </review-card>
                 {% endfor %}
                 </div>
@@ -59,7 +59,7 @@
                 <h2>How to reach {{ placeName }}</h3>
                 <address>
                     <p>{{ formattedAddress }}</p>
-                    <p>Website: <a href="https://{{ locationWebsite }}">{{ locationWebsite }}</a></p>
+                    <p>Website: <a href="{{ locationWebsite }}">{{ locationWebsite }}</a></p>
                 </address>
                 <iframe
                     frameborder="0" style="border:0"

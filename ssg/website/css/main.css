@@ -164,3 +164,8 @@ stars-widget {
     width: 100%;
     aspect-ratio: 1/1;
 }
+
+#ratings h3 span {
+    color: grey;
+    font-weight: 400;
+}
