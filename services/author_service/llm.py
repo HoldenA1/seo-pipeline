@@ -3,6 +3,7 @@
 import requests
 import json
 import re
+from pydantic import BaseModel, Field
 
 # Make shared files accessible
 import sys
@@ -12,94 +13,90 @@ sys.path.append(PROJECT_ROOT)
 from shared.keys import PERPLEXITY_AI_KEY
 
 API_ENDPOINT = "https://api.perplexity.ai/chat/completions"
-ARTICLE_PROMPT = """
-You are author that wrotes articles on businesses. The purpose of the article is to convince readers that the business is a good place to host a meetup with friends or family. Start by performing a search to pull information on the business. I will also provide information you can pull from about the business. Generate the following fields and provide only valid JSON output.
-The JSON object must have exactly six keys: "Slug", "SEOMetaDescription", "Title", "Summary", "ReviewsSummary", and "DetailedInfo".
-For example:
+SYSTEM_PROMPT = """
+You are a professional author that writes articles on businesses. The purpose of the article is to convince readers that the business is a good place to host a meetup with friends or family.
+
+Respond in JSON format with the following structure:
 {
-  "Slug": "filename of the article. use hyphens not spaces",
-  "SEOMetaDescription": "Short description of the business that will entice users to visit the page",
-  "Title": "Descriptive title that captivates readers to read further",
-  "Summary": "minimum 200 words. Describe what makes this business a great place to meet up with friends. Include a few highlights about the place",
-  "ReviewsSummary": "minimum 200 words. Summarize what users from reviews thought, in another paragraph talk about what positive reviews mentioned, and a paragraph summarizing the negative reviews. Then a short conclusion on the reviews",
-  "DetailedInfo": "Write at least 1000 words. Ensure the response is a minimum of 1000 words, and do not stop before reaching that length. Start this section with with a paragraph (200 words) that answers the question "Why rally at this place with your friends?" Then, list out in detail what activities there are and why the place is perfect for a group meetup. Make each paragraph at least five sentences (150 words) and make section headers questions that closely match queries users might actually type. This section should be written in markdown"
+  'slug': 'filename for',
+  'title': '',
+  "seo_meta": '',
+  'general_summary': '',
+  'reviews_summary': '',
+  'detailed_info': ''
 }
-Here is the business data:
-"""
+
+Below is a description of what each json field contain:
+slug: filename of the article. use hyphens not spaces
+title: Short description of the business that will entice users to visit the page
+seo_meta: Short description of the business that will entice users to visit the page
+general_summary: minimum 200 words. Describe what makes this business a great place to meet up with friends. Include a few highlights about the place
+reviews_summary: minimum 200 words. Summarize what users from reviews thought, in another paragraph talk about what positive reviews mentioned, and a paragraph summarizing the negative reviews. Then a short conclusion on the reviews
+detailed_info: Write at least 1000 words. Ensure the response is a minimum of 1000 words, and do not stop before reaching that length. Start this section with with a paragraph (200 words) that answers the question "Why rally at this place with your friends?" Then, list out in detail what activities there are and why the place is perfect for a group meetup. Make each paragraph at least five sentences (150 words) and make section headers questions that closely match queries users might actually type. This field should be written in markdown
+""".strip()
+USER_PROMPT = "Write an article on the following business:\n"
+
+
+class AnswerFormat(BaseModel):
+    slug: str = Field(description="filename of the article. use hyphens not spaces")
+    title: str = Field(description="Descriptive title that captivates readers to read further")
+    general_summary: str = Field(description="minimum 200 words. Describe what makes this business a great place to meet up with friends. Include a few highlights about the place")
+    reviews_summary: str = Field(description="minimum 200 words. Summarize what users from reviews thought, in another paragraph talk about what positive reviews mentioned, and a paragraph summarizing the negative reviews. Then a short conclusion")
+    seo_meta: str = Field(description="Short description of the business to entice users to visit the page")
+    detailed_info: str = Field(description="Write at least 1000 words. Ensure the response is a minimum of 1000 words, and do not stop before reaching that length. Start this section with with a paragraph (200 words) that answers the question Why rally at this place with your friends? Then, list out in detail what activities there are and why the place is perfect for a group meetup. Make each paragraph at least five sentences (150 words) and make section headers questions that closely match queries users might actually type. This section should be written in markdown")
+
 
 def generate_article_content(name: str, rating: float, review_count: int, summary:str=None,address:str=None, website:str=None) -> dict:
     """
     Send a prompt to Perplexity API and parse the response.
         
     Returns:
-        dict: JSON response with keys 'Slug', 'SEOMetaDescription', 'Title', 'Summary', 'ReviewsSummary', 'DetailedInfo', and 'Sources'.
+        dict: JSON response with keys 'slug', 'seo_meta', 'title', 'summary', 'reviews_summary', 'detailed_info', and 'sources'.
     """
     business_data = f"""Name: {name}{"\nAddress: " + address if address!=None else ""}
-Rating: {rating} ({review_count} reviews){"\nWebsite: " + website if website!=None else ""}
-"""
-    prompt = (ARTICLE_PROMPT + business_data).strip()
+Rating: {rating} ({review_count} reviews){"\nWebsite: " + website if website!=None else ""}{"\nSummary: " + summary if summary!=None else ""}"""
+    
+    user_prompt = (USER_PROMPT + business_data).strip()
 
+    headers = {"Authorization": f"Bearer {PERPLEXITY_AI_KEY}"}
     payload = {
         "model": "sonar",
         "messages": [
-            {"role": "user", "content": prompt}
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt}
         ],
-        "max_tokens": 3000
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {"schema": AnswerFormat.model_json_schema()},
+        },
+        "max_tokens": 3000,
+        "strip_whitespace": True
     }
 
     try:
-        headers = {
-            "Authorization": f"Bearer {PERPLEXITY_AI_KEY}",
-            "Content-Type": "application/json"
-        }
         response = requests.post(API_ENDPOINT, headers=headers, json=payload)
         response.raise_for_status()
-
         result = response.json()
+
+        citations = result.get("citations", [])
         
-        if result.get("choices") and len(result["choices"]) > 0:
+        if "choices" in result and result["choices"] and "message" in result["choices"][0]:
             content = result["choices"][0]["message"]["content"]
-            return fix_multiline_json(content)
-        else:
-            print("No answer provided in the response.")
-            return None
-
+            try:
+                print("Generated content:")
+                parsed = AnswerFormat.model_validate_json(content).model_dump()
+                print(parsed)
+                if citations and 'sources' not in parsed:
+                    parsed['sources'] = citations
+                return parsed
+            except KeyError as e:
+                return {"error": f"Failed to parse structured output: {str(e)}", "raw_response": content, "sources": citations}
+            
+        return {"error": "Unexpected API response format", "raw_response": result}
+            
+    except requests.exceptions.RequestException as e:
+        return {"error": f"API request failed: {str(e)}"}
+    except json.JSONDecodeError:
+        return {"error": "Failed to parse API response as JSON"}
     except Exception as e:
-        print(f"Error: {e}")
-        return None
-
-
-def fix_multiline_json(llm_output: str) -> None:
-    """
-    Fixes invalid JSON with unescaped newlines inside string values.
-    - Ensures newlines inside strings are properly escaped.
-    - Removes any extra text before/after JSON.
-    """
-    try:
-        # Strip markdown formatting
-        cleaned_json = strip_json_formatting(llm_output)
-
-        # Fix multi-line strings by escaping unescaped newlines
-        def escape_newlines(match):
-            return match.group(0).replace("\n", "\\n")
-
-        cleaned_json = re.sub(r'".*?"', escape_newlines, cleaned_json, flags=re.DOTALL)
-
-        # Parse JSON safely
-        parsed_data = json.loads(cleaned_json)
-        return parsed_data
-
-    except json.JSONDecodeError as e:
-        print("Error decoding JSON:", e)
-        return None
-
-
-def strip_json_formatting(llm_output: str):
-    """
-    Strips ```json ... ``` formatting from LLM output if present.
-    """
-    # Match and remove markdown-style JSON block
-    json_match = re.search(r'```json\s*(.*?)\s*```', llm_output, re.DOTALL)
-    return json_match.group(1) if json_match else llm_output  # Return stripped JSON or original if no match
-
-print(fix_multiline_json(OUTPUT)["DetailedInfo"])
+        return {"error": f"Unexpected error: {str(e)}"}

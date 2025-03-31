@@ -58,4 +58,4 @@ class Scout:
 
 s = Scout(places_v1.PlacesClient())
 
-s.download_place_photos("ChIJNdJ0mKC1j4ARfW-tKRRpmow", PHOTOS_FOLDER)
+s.download_place_photos("ChIJuwR-D9p0j4ARPi-8zlkLd54", PHOTOS_FOLDER)

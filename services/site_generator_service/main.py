@@ -3,7 +3,8 @@
 # Make shared files accessible
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.append(PROJECT_ROOT)
 
 from shared.keys import STRAPI_API_KEY
 import requests
@@ -122,7 +123,6 @@ class Generator:
     
 
 
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_PATH = os.path.join(CUR_DIR, "template.html")
 WEBSITE_FOLDER = os.path.join(PROJECT_ROOT, "website")

@@ -28,5 +28,5 @@ class Article:
     business_url: str
     city: str
     sources: list[str]
-    images: list[str]
+    images: list[dict]
     slug: str

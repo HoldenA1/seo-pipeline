@@ -56,7 +56,7 @@
             </section>
 
             <section id="contact">
-                <h2>How to reach {{ placeName }}</h3>
+                <h2>How to reach {{ placeName }}</h2>
                 <address>
                     <p>{{ formattedAddress }}</p>
                     <p>Website: <a href="{{ locationWebsite }}">{{ locationWebsite }}</a></p>
@@ -69,13 +69,10 @@
                 </iframe>
             </section>
 
-            <section id="activities">
-                <h2>Why rally at {{ placeName }} with your friends</h3>
-                {{ detailedInformation }}
-            </section>
+            <section id="activities">{{ detailedInformation }}</section>
 
             <section id="source">
-                <h2>Don't just take our word for it. Check out these other websites for more info on the {{ placeName }}</h3>
+                <h2>Don't just take our word for it. Check out these other websites for more info on the {{ placeName }}</h2>
                 <ul>
                 {% for source in sources %}
                     <li><a href="{{ source }}">{{ source }}</a></li>
