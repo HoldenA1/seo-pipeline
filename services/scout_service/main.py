@@ -8,7 +8,7 @@ PHOTOS_FOLDER = os.path.abspath(os.path.join(PROJECT_ROOT, "shared/scraped_photo
 sys.path.append(PROJECT_ROOT)
 
 import requests
-from shared.database import initialize_database
+from shared.database import initialize_database, DATABASE_PATH
 from google.maps import places_v1
 import sqlite3
 
@@ -28,6 +28,43 @@ class Scout:
         response = self.client.get_place(request=request, metadata=[("x-goog-fieldmask", "photos")])
 
         return response.photos
+    
+    def fetch_reviews(self, place_id: str) -> places_v1.Place:
+        # Create a client
+        request = places_v1.GetPlaceRequest(
+            name=f"places/{place_id}",
+            language_code="en"
+        )
+        # Fetch the place details
+        response = self.client.get_place(request=request, metadata=[("x-goog-fieldmask", "reviews")])
+
+        return response
+    
+    def insert_review_into_db(self, review: places_v1.Review, place_id: str, conn: sqlite3.Connection):
+        author = review.author_attribution
+
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO reviews (place_id, author_name, author_uri, author_photo, rating, publish_time, review_text)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            place_id,
+            author.display_name,
+            author.uri,
+            author.photo_uri,
+            review.rating,
+            review.publish_time.isoformat(),
+            review.text.text
+        ))
+
+    def store_reviews(self, reviews, place_id: str):
+        """Store reviews in the SQLite database."""
+        with sqlite3.connect(DATABASE_PATH) as conn:
+            # Insert each review
+            for review in reviews:
+                self.insert_review_into_db(review, place_id, conn)
+            conn.commit()  # Auto-closes connection when block ends
+        print(f"Stored reviews for place {place_id}.")
 
     def download_photo(self, photo_ref: places_v1.Photo, filename: str, photos_dir: str):
         """Downloads a photo given a photo reference."""
@@ -56,6 +93,9 @@ class Scout:
             self.download_photo(photo_ref, str(idx), place_photos_dir)
 
 
+PLACE_ID = "ChIJb5PjCwCrEmsRlq2Mj1VBiJQ"
+
 s = Scout(places_v1.PlacesClient())
 
-s.download_place_photos("ChIJuwR-D9p0j4ARPi-8zlkLd54", PHOTOS_FOLDER)
+place = s.fetch_reviews(PLACE_ID)
+s.store_reviews(place.reviews, PLACE_ID)
