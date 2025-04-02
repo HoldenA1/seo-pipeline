@@ -2,6 +2,12 @@
 
 This project is intended to be an automated pipeline that generates articles using an LLM, then publishes them on a website. The goal is to automate the entire process so that it can generate and publish content entirely autonomously.
 
+## TODO
+
+- [ ] Add some needed error handling
+- [ ] Add testing
+- [ ] Work on logging for services
+
 ## Project Structure
 
 ### Folders
