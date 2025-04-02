@@ -1,6 +1,15 @@
 """Defines the schema for article data pulled from the CMS"""
 
 from dataclasses import dataclass
+from enum import Enum
+
+class ArticleStatus(Enum):
+    """Represents the state of an article"""
+    SCOUTED = 0 # Places that were just found by the scout
+    FILTERED = 1 # Places validated by the scout. Ready for author
+    PUBLISHED = 2 # Author has published article
+    NEEDS_UPDATE = 3 # Info has changed since article was published
+    REJECTED = 4 # Filtered out by the scout
 
 @dataclass
 class Review:
@@ -14,6 +23,7 @@ class Review:
 
 @dataclass
 class Article:
+    """Represents everything that is stored in the CMS"""
     title: str
     place_name: str
     place_id: str
@@ -26,7 +36,17 @@ class Article:
     detailed_info: str
     formatted_address: str
     business_url: str
-    city: str
     sources: list[str]
     images: list[dict]
     slug: str
+
+@dataclass
+class PlaceData:
+    """Represents the data scraped from Google"""
+    place_name: str
+    place_id: str
+    general_summary: str
+    rating: float
+    reviews_count: int
+    formatted_address: str
+    business_url: str

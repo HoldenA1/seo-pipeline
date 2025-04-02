@@ -8,16 +8,28 @@ PHOTOS_FOLDER = os.path.abspath(os.path.join(PROJECT_ROOT, "shared/scraped_photo
 sys.path.append(PROJECT_ROOT)
 
 import requests
-from shared.database import initialize_database, DATABASE_PATH
+import shared.database as db
+from shared.schema import Review, PlaceData, ArticleStatus
 from google.maps import places_v1
-import sqlite3
+
+# Constants
+INCLUDED_FIELDS = [
+    "places.display_name",
+    "places.id",
+    "places.formatted_address",
+    "places.types",
+    "places.rating",
+    "places.user_rating_count",
+    "places.website_uri",
+    "places.editorial_summary"
+]
 
 class Scout:
 
-    def __init__(self, client: places_v1.PlacesClient):
-        self.client = client
+    def __init__(self):
+        self.client = places_v1.PlacesClient()
         # Initialize db on startup
-        initialize_database()
+        db.init_db()
 
     def fetch_photos(self, place_id: str):
         request = places_v1.GetPlaceRequest(
@@ -28,43 +40,30 @@ class Scout:
         response = self.client.get_place(request=request, metadata=[("x-goog-fieldmask", "photos")])
 
         return response.photos
-    
-    def fetch_reviews(self, place_id: str) -> places_v1.Place:
-        # Create a client
+
+    def fetch_reviews(self, place_id: str) -> list[Review]:
         request = places_v1.GetPlaceRequest(
             name=f"places/{place_id}",
             language_code="en"
         )
-        # Fetch the place details
+        # Make the request
         response = self.client.get_place(request=request, metadata=[("x-goog-fieldmask", "reviews")])
 
-        return response
-    
-    def insert_review_into_db(self, review: places_v1.Review, place_id: str, conn: sqlite3.Connection):
-        author = review.author_attribution
+        reviews = []
+        for review in response.reviews:
+            author = review.author_attribution
+            reviews.append(
+                Review(
+                    author_name=author.display_name,
+                    author_profile_url=author.uri,
+                    author_photo_url=author.photo_uri,
+                    rating=review.rating,
+                    time_published=review.publish_time.isoformat(),
+                    content=review.text.text
+                )
+            )
 
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO reviews (place_id, author_name, author_uri, author_photo, rating, publish_time, review_text)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            place_id,
-            author.display_name,
-            author.uri,
-            author.photo_uri,
-            review.rating,
-            review.publish_time.isoformat(),
-            review.text.text
-        ))
-
-    def store_reviews(self, reviews, place_id: str):
-        """Store reviews in the SQLite database."""
-        with sqlite3.connect(DATABASE_PATH) as conn:
-            # Insert each review
-            for review in reviews:
-                self.insert_review_into_db(review, place_id, conn)
-            conn.commit()  # Auto-closes connection when block ends
-        print(f"Stored reviews for place {place_id}.")
+        return reviews
 
     def download_photo(self, photo_ref: places_v1.Photo, filename: str, photos_dir: str):
         """Downloads a photo given a photo reference."""
@@ -92,10 +91,59 @@ class Scout:
         for idx, photo_ref in enumerate(photo_references):
             self.download_photo(photo_ref, str(idx), place_photos_dir)
 
+    def search_text(self, activity: str, location: str) -> list[PlaceData]:
+        """Searches for businesses fitting activity in the location provided"""
 
-PLACE_ID = "ChIJb5PjCwCrEmsRlq2Mj1VBiJQ"
+        request = places_v1.SearchTextRequest(
+            text_query = f"{activity} in {location}",
+        )
+        field_mask = ','.join(INCLUDED_FIELDS) # Define the field mask in metadata
+        response = self.client.search_text(request, metadata=[("x-goog-fieldmask", field_mask)])
 
-s = Scout(places_v1.PlacesClient())
+        places = []
+        for place in response.places:
+            places.append(
+                PlaceData(
+                    place_id=place.id,
+                    place_name=place.display_name.text,
+                    general_summary=place.editorial_summary.text,
+                    rating=place.rating,
+                    reviews_count=place.user_rating_count,
+                    formatted_address=place.formatted_address,
+                    business_url=place.website_uri
+                )
+            )
 
-place = s.fetch_reviews(PLACE_ID)
-s.store_reviews(place.reviews, PLACE_ID)
+        return places
+    
+    def mark_place_as_filtered(self, place_id: str):
+        """This function downloads the reviews and photos for the specified place
+        then marks it as filtered in the database.
+        """
+        reviews = self.fetch_reviews(place_id)
+        db.store_reviews(reviews)
+
+        photos = self.fetch_photos(place_id)
+        for idx, photo in enumerate(photos):
+            self.download_photo(photo, f"photo_{idx}", PHOTOS_FOLDER)
+
+        db.update_place_status(place_id, ArticleStatus.FILTERED)
+
+
+PLACE_ID = "ChIJE6itKDe1j4ARgUt0_iojJgQ"
+
+s = Scout()
+# places = s.search_text("Kayaking", "Half Moon Bay")
+# db.store_places(places)
+retrieved = db.get_places_by_status(ArticleStatus.FILTERED)
+for results in retrieved:
+    print(results)
+db.update_place_status("ChIJpaH4-suAj4AR-RFlCOUHmmQ", ArticleStatus.FILTERED)
+retrieved = db.get_places_by_status(ArticleStatus.FILTERED)
+for results in retrieved:
+    print(results)
+
+# reviews = s.fetch_reviews(PLACE_ID)
+# db.store_reviews(reviews, PLACE_ID)
+# reviews_from_db = db.get_reviews(PLACE_ID)
+# print(reviews_from_db[0])
