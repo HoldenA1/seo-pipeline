@@ -23,6 +23,72 @@ STRAPI_ARTICLE_URL = "http://localhost:1337/api/articles"
 from shared.keys import STRAPI_API_KEY, STRAPI_UPLOAD_KEY
     
 
+def main():
+    """Main author loop"""
+    # First we get all of the articles approved by the scout
+    places_data = db.get_places_by_status(ArticleStatus.FILTERED)
+
+    # Loop through the places
+    while len(places_data) > 0:
+        for place in places_data:
+            # Write and publish article
+            print(f"Writing an article on {place.place_name}")
+
+            while True: # Do while loop
+                print("Generating content...")
+                generated_content = generate_article_content(
+                    place.place_name,
+                    place.rating,
+                    place.reviews_count,
+                    place.general_summary,
+                    place.formatted_address,
+                    place.business_url
+                )
+                if "error" in generated_content:
+                    # If the LLM generated poorly formatted content, try again
+                    print(generated_content["error"])
+                    print(f"Raw response from LLM: {generated_content["raw_response"]}\n")
+                else:
+                    break
+
+
+            article = Article(
+                title=clean(generated_content['title']),
+                place_name=place.place_name,
+                place_id=place.place_id,
+                general_summary=clean(generated_content['general_summary']),
+                seo_meta=clean(generated_content['seo_meta']),
+                rating=place.rating,
+                reviews_count=place.reviews_count,
+                reviews_summary=clean(generated_content['reviews_summary']),
+                reviews=db.get_reviews(place.place_id),
+                detailed_info=clean(generated_content['detailed_info']),
+                formatted_address=place.formatted_address,
+                business_url=place.business_url,
+                sources=generated_content['sources'],
+                slug=clean(generated_content['slug']),
+                images=[] # populate later
+            )
+
+            # Upload photos
+            print("Uploading photos...")
+            IMAGE_FOLDER = os.path.join(PROJECT_ROOT, "shared/scraped_photos", place.place_id)
+            image_paths = glob.glob(os.path.join(IMAGE_FOLDER, "*.jpg"))
+            image_ids = upload_images_to_cms(image_paths, STRAPI_UPLOAD_URL)
+            article.images = image_ids
+
+            print("Uploading to CMS...")
+            write_article_to_cms(article, STRAPI_ARTICLE_URL)
+
+            # Mark as completed to avoid infinite loop
+            db.update_place_status(place.place_id, ArticleStatus.PUBLISHED)
+
+            print("Done.")
+
+        # Check again for any newly filtered places
+        places_data = db.get_places_by_status(ArticleStatus.FILTERED)
+
+
 def upload_images_to_cms(image_paths: list[str], url: str) -> list[dict]:
     """Returns the document ids of the uploaded images"""
     headers = { "Authorization": f"Bearer {STRAPI_UPLOAD_KEY}" }
@@ -81,7 +147,7 @@ def write_article_to_cms(article: Article, url: str):
             "DetailedInformation": article.detailed_info,
             "FormattedAddress": article.formatted_address,
             "WebsiteURL": article.business_url,
-            "City": article.city,
+            "City": "", # Add this later
             "Sources": article.sources,
             "Images": article.images,
             "Slug": article.slug,
@@ -95,52 +161,13 @@ def write_article_to_cms(article: Article, url: str):
     print(response.status_code, response.json())
 
 
-"""
-This is the entrypoint for the author
-"""
+def clean(data: str):
+    # Sometimes the llm prepends a : or - to the field. Why? I don't know.
+    remove_colons = re.sub(r'^:+', '', data)
+    remove_hyphens = re.sub(r'^-+', '', remove_colons)
+    return remove_hyphens
 
-# First we get all of the articles approved by the scout
-place_data = db.get_places_by_status(ArticleStatus.FILTERED)
 
-while len(place_data) > 0:
-    # Now we generate the articles for the filtered places
-    place = place_data.pop()
-    print(f"Writing an article on {place.place_name}")
-    db.update_place_status(place.place_id, ArticleStatus.PUBLISHED)
-
-# print("Generating content...")
-# generated_content = generate_article_content(
-#     article.place_name,
-#     article.rating,
-#     article.reviews_count,
-#     article.general_summary,
-#     article.formatted_address,
-#     article.business_url
-# )
-
-# def clean(data: str):
-#     # Sometimes the llm prepends a : or - to the field. Why? I don't know.
-#     remove_colons = re.sub(r'^:+', '', data)
-#     remove_hyphens = re.sub(r'^-+', '', remove_colons)
-#     return remove_hyphens
-
-# article.city = "Cupertino"
-# article.slug = clean(generated_content['slug'])
-# article.detailed_info = clean(generated_content['detailed_info'])
-# article.general_summary = clean(generated_content['general_summary'])
-# article.title = clean(generated_content['title'])
-# article.reviews_summary = clean(generated_content['reviews_summary'])
-# article.seo_meta = clean(generated_content['seo_meta'])
-# article.sources = generated_content['sources']
-
-# # Upload photos
-# print("Uploading photos...")
-# IMAGE_FOLDER = os.path.join(PROJECT_ROOT, "shared/scraped_photos", PLACE_ID)
-# image_paths = glob.glob(os.path.join(IMAGE_FOLDER, "*.jpg"))
-# image_ids = a.upload_images_to_cms(image_paths)
-# article.images = image_ids
-
-# print("Uploading to CMS...")
-# a.write_article_to_cms(article, "http://localhost:1337/api/articles")
-
-# print("Done.")
+# main script entry point
+if __name__ == "__main__":
+    main()

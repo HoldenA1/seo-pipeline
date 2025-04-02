@@ -83,9 +83,7 @@ Rating: {rating} ({review_count} reviews){"\nWebsite: " + website if website!=No
         if "choices" in result and result["choices"] and "message" in result["choices"][0]:
             content = result["choices"][0]["message"]["content"]
             try:
-                print("Generated content:")
                 parsed = AnswerFormat.model_validate_json(content).model_dump()
-                print(parsed)
                 if citations and 'sources' not in parsed:
                     parsed['sources'] = citations
                 return parsed

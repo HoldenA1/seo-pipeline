@@ -159,7 +159,7 @@ def store_places(places: list[PlaceData]):
                 place.place_name,
                 place.formatted_address,
                 place.rating,
-                place.rating,
+                place.reviews_count,
                 place.general_summary,
                 place.business_url,
                 ArticleStatus.SCOUTED.value

@@ -55,7 +55,7 @@ class Generator:
             detailedInformation=article.detailed_info,
             formattedAddress=article.formatted_address,
             locationWebsite=article.business_url,
-            city=article.city,
+            city="City", # placeholder for now
             sources=article.sources,
             images=article.images,
             slug=article.slug
@@ -112,7 +112,6 @@ class Generator:
                     detailed_info=main_html,
                     formatted_address=data["FormattedAddress"],
                     business_url=data["WebsiteURL"],
-                    city=data["City"],
                     sources=data["Sources"],
                     images=images_list,
                     slug=data["Slug"]

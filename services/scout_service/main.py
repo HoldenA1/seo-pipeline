@@ -14,15 +14,54 @@ from google.maps import places_v1
 
 # Constants
 INCLUDED_FIELDS = [
-    "places.display_name",
-    "places.id",
-    "places.formatted_address",
-    "places.types",
-    "places.rating",
-    "places.user_rating_count",
-    "places.website_uri",
-    "places.editorial_summary"
+    "display_name",
+    "id",
+    "formatted_address",
+    "types",
+    "rating",
+    "user_rating_count",
+    "website_uri",
+    "editorial_summary"
 ]
+FIELD_MASK = ','.join(INCLUDED_FIELDS)
+
+
+def main():
+    """Main scout loop"""
+    scout = Scout()
+
+    ids = [
+        # "ChIJtQG0Z6yAj4ARbtnTvKbH4uE",
+        # "ChIJt8Cb82l_j4ARaCVSzzc8gYc",
+        # "ChIJBZ57qH6HhYARIrlrkRUFIXc",
+        # "ChIJZWuUMTl9j4ARaZg735s0HQ4",
+        # "ChIJ1YxQz_6fj4ARVPxTSbRXuoo",
+        # "ChIJDcRm4OMGhYARMhxK8pdb1Tg",
+        # "ChIJE6itKDe1j4ARgUt0_iojJgQ",
+        # "ChIJZ2skEjx-j4ARYGXhoxMdpSk",
+        # "ChIJNdJ0mKC1j4ARfW-tKRRpmow",
+        # "ChIJuwR-D9p0j4ARPi-8zlkLd54",
+        "ChIJqUgTD6uAj4ARkv-s_124I0k"
+    ]
+    for id in ids:
+        # pull data
+        print("fetching data...")
+        place = scout.fetch_place(id, FIELD_MASK)
+        data = PlaceData(
+            place_id=place.id,
+            place_name=place.display_name.text,
+            general_summary=place.editorial_summary.text,
+            rating=place.rating,
+            reviews_count=place.user_rating_count,
+            formatted_address=place.formatted_address,
+            business_url=place.website_uri
+        )
+        print("storing data...")
+        db.store_places([data])
+        print("downloading reviews and photos...")
+        scout.mark_place_as_filtered(id)
+        print("done.")
+
 
 class Scout:
 
@@ -31,23 +70,23 @@ class Scout:
         # Initialize db on startup
         db.init_db()
 
+    def fetch_place(self, place_id: str, field_mask: str) -> places_v1.Place:
+        """Fetches the place data that fits the fieldmask.
+
+        This is mainly a helper function. Use the other fetch functions for specific data
+        """
+        request = places_v1.GetPlaceRequest(
+            name=f"places/{place_id}",
+            language_code="en"
+        )
+        response = self.client.get_place(request, metadata=[("x-goog-fieldmask", field_mask)])
+        return response
+
     def fetch_photos(self, place_id: str):
-        request = places_v1.GetPlaceRequest(
-            name=f"places/{place_id}",
-            language_code="en"
-        )
-        # Fetch the place details
-        response = self.client.get_place(request=request, metadata=[("x-goog-fieldmask", "photos")])
-
-        return response.photos
-
+        return self.fetch_place(place_id, "photos").photos
+    
     def fetch_reviews(self, place_id: str) -> list[Review]:
-        request = places_v1.GetPlaceRequest(
-            name=f"places/{place_id}",
-            language_code="en"
-        )
-        # Make the request
-        response = self.client.get_place(request=request, metadata=[("x-goog-fieldmask", "reviews")])
+        response = self.fetch_place(place_id, "reviews")
 
         reviews = []
         for review in response.reviews:
@@ -97,8 +136,7 @@ class Scout:
         request = places_v1.SearchTextRequest(
             text_query = f"{activity} in {location}",
         )
-        field_mask = ','.join(INCLUDED_FIELDS) # Define the field mask in metadata
-        response = self.client.search_text(request, metadata=[("x-goog-fieldmask", field_mask)])
+        response = self.client.search_text(request, metadata=[("x-goog-fieldmask", FIELD_MASK)])
 
         places = []
         for place in response.places:
@@ -121,24 +159,29 @@ class Scout:
         then marks it as filtered in the database.
         """
         reviews = self.fetch_reviews(place_id)
-        db.store_reviews(reviews)
+        db.store_reviews(reviews, place_id)
 
         photos = self.fetch_photos(place_id)
         for idx, photo in enumerate(photos):
-            self.download_photo(photo, f"photo_{idx}", PHOTOS_FOLDER)
+            dir = os.path.join(PHOTOS_FOLDER, place_id)
+            os.makedirs(dir, exist_ok=True)
+            self.download_photo(photo, f"photo_{idx}", dir)
 
         db.update_place_status(place_id, ArticleStatus.FILTERED)
 
 
 PLACE_ID = "ChIJE6itKDe1j4ARgUt0_iojJgQ"
 
-s = Scout()
+# s = Scout()
 # places = s.search_text("Kayaking", "Half Moon Bay")
 # db.store_places(places)
-retrieved = db.get_places_by_status(ArticleStatus.FILTERED)
-for results in retrieved:
-    print(results)
-db.update_place_status("ChIJpaH4-suAj4AR-RFlCOUHmmQ", ArticleStatus.FILTERED)
+# retrieved = db.get_places_by_status(ArticleStatus.SCOUTED)
+# for results in retrieved:
+#     print(results)
+# db.update_place_status("ChIJpaH4-suAj4AR-RFlCOUHmmQ", ArticleStatus.FILTERED)
+# db.update_place_status("ChIJEwzHjrdzj4AR42bc3UdrPRY", ArticleStatus.FILTERED)
+# db.update_place_status("ChIJP3TumKN-hYARq1EojP4PAjI", ArticleStatus.FILTERED)
+# db.update_place_status("ChIJt1bt4b9QhIARoB4vbHo6M1k", ArticleStatus.FILTERED)
 retrieved = db.get_places_by_status(ArticleStatus.FILTERED)
 for results in retrieved:
     print(results)
@@ -147,3 +190,7 @@ for results in retrieved:
 # db.store_reviews(reviews, PLACE_ID)
 # reviews_from_db = db.get_reviews(PLACE_ID)
 # print(reviews_from_db[0])
+
+# main script entry point
+if __name__ == "__main__":
+    main()
