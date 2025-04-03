@@ -138,7 +138,7 @@ def generate_html(article: Article, template: Template) -> str:
         detailedInformation=article.detailed_info,
         formattedAddress=article.formatted_address,
         locationWebsite=article.business_url,
-        city=article.city, # placeholder for now
+        city=article.city,
         sources=article.sources,
         images=article.images,
         slug=article.slug
