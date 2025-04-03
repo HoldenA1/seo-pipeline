@@ -31,17 +31,7 @@ def main():
     scout = Scout()
 
     ids = [
-        # "ChIJtQG0Z6yAj4ARbtnTvKbH4uE",
-        # "ChIJt8Cb82l_j4ARaCVSzzc8gYc",
-        # "ChIJBZ57qH6HhYARIrlrkRUFIXc",
-        # "ChIJZWuUMTl9j4ARaZg735s0HQ4",
-        # "ChIJ1YxQz_6fj4ARVPxTSbRXuoo",
-        # "ChIJDcRm4OMGhYARMhxK8pdb1Tg",
-        # "ChIJE6itKDe1j4ARgUt0_iojJgQ",
-        # "ChIJZ2skEjx-j4ARYGXhoxMdpSk",
-        # "ChIJNdJ0mKC1j4ARfW-tKRRpmow",
-        # "ChIJuwR-D9p0j4ARPi-8zlkLd54",
-        "ChIJqUgTD6uAj4ARkv-s_124I0k"
+        "ChIJF8VqETS3j4ARxmLCuGE7dzk"
     ]
     for id in ids:
         # pull data
@@ -169,27 +159,6 @@ class Scout:
 
         db.update_place_status(place_id, ArticleStatus.FILTERED)
 
-
-PLACE_ID = "ChIJE6itKDe1j4ARgUt0_iojJgQ"
-
-# s = Scout()
-# places = s.search_text("Kayaking", "Half Moon Bay")
-# db.store_places(places)
-# retrieved = db.get_places_by_status(ArticleStatus.SCOUTED)
-# for results in retrieved:
-#     print(results)
-# db.update_place_status("ChIJpaH4-suAj4AR-RFlCOUHmmQ", ArticleStatus.FILTERED)
-# db.update_place_status("ChIJEwzHjrdzj4AR42bc3UdrPRY", ArticleStatus.FILTERED)
-# db.update_place_status("ChIJP3TumKN-hYARq1EojP4PAjI", ArticleStatus.FILTERED)
-# db.update_place_status("ChIJt1bt4b9QhIARoB4vbHo6M1k", ArticleStatus.FILTERED)
-retrieved = db.get_places_by_status(ArticleStatus.FILTERED)
-for results in retrieved:
-    print(results)
-
-# reviews = s.fetch_reviews(PLACE_ID)
-# db.store_reviews(reviews, PLACE_ID)
-# reviews_from_db = db.get_reviews(PLACE_ID)
-# print(reviews_from_db[0])
 
 # main script entry point
 if __name__ == "__main__":
