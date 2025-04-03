@@ -36,6 +36,7 @@ class Article:
     detailed_info: str
     formatted_address: str
     business_url: str
+    city: str
     sources: list[str]
     images: list[dict]
     slug: str
@@ -50,3 +51,4 @@ class PlaceData:
     reviews_count: int
     formatted_address: str
     business_url: str
+    city: str

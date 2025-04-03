@@ -10,6 +10,7 @@ sys.path.append(PROJECT_ROOT)
 import requests
 import shared.database as db
 from shared.schema import Review, PlaceData, ArticleStatus
+from shared.keys import GOOGLE_MAPS_KEY
 from google.maps import places_v1
 
 # Constants
@@ -21,7 +22,8 @@ INCLUDED_FIELDS = [
     "rating",
     "user_rating_count",
     "website_uri",
-    "editorial_summary"
+    "editorial_summary",
+    "location"
 ]
 FIELD_MASK = ','.join(INCLUDED_FIELDS)
 
@@ -31,7 +33,8 @@ def main():
     scout = Scout()
 
     ids = [
-        "ChIJF8VqETS3j4ARxmLCuGE7dzk"
+        "ChIJF8VqETS3j4ARxmLCuGE7dzk",
+        "ChIJUzd2sz62j4ARaPfiq1rRSNQ"
     ]
     for id in ids:
         # pull data
@@ -44,7 +47,8 @@ def main():
             rating=place.rating,
             reviews_count=place.user_rating_count,
             formatted_address=place.formatted_address,
-            business_url=place.website_uri
+            business_url=place.website_uri,
+            city=scout.get_city(place.location.latitude, place.location.longitude)
         )
         print("storing data...")
         db.store_places([data])
@@ -59,6 +63,19 @@ class Scout:
         self.client = places_v1.PlacesClient()
         # Initialize db on startup
         db.init_db()
+
+    def get_city(self, lat: float, lng: float) -> str:
+        url = f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lng}&key={GOOGLE_MAPS_KEY}"
+        response = requests.get(url)
+        data = response.json()
+
+        if data["status"] == "OK":
+            for result in data["results"]:
+                for component in result["address_components"]:
+                    if "locality" in component["types"]:
+                        return component["long_name"]
+        
+        return None
 
     def fetch_place(self, place_id: str, field_mask: str) -> places_v1.Place:
         """Fetches the place data that fits the fieldmask.

@@ -33,6 +33,7 @@ def init_db():
             reviews_count REAL,
             editorial_summary TEXT,
             business_site TEXT,
+            city TEXT,
             status INT
         )
     """)
@@ -91,7 +92,8 @@ def get_places(query: str) -> list[PlaceData]:
                     rating=row[3],
                     reviews_count=row[4],
                     formatted_address=row[2],
-                    business_url=row[6]
+                    business_url=row[6],
+                    city=row[7]
                 )
             )
     except sqlite3.Error as e:
@@ -152,8 +154,8 @@ def store_places(places: list[PlaceData]):
 
         for place in places:
             cursor.execute("""
-                INSERT OR IGNORE INTO places (id, name, address, rating, reviews_count, editorial_summary, business_site, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT OR IGNORE INTO places (id, name, address, rating, reviews_count, editorial_summary, business_site, city, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 place.place_id,
                 place.place_name,
@@ -162,6 +164,7 @@ def store_places(places: list[PlaceData]):
                 place.reviews_count,
                 place.general_summary,
                 place.business_url,
+                place.city,
                 ArticleStatus.SCOUTED.value
             ))
 

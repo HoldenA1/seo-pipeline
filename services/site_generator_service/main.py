@@ -88,6 +88,7 @@ def strapi_webhook():
             detailed_info=main_html,
             formatted_address=article_data["FormattedAddress"],
             business_url=article_data["WebsiteURL"],
+            city=article_data["City"],
             sources=article_data["Sources"],
             images=images_list,
             slug=article_data["Slug"]
@@ -137,7 +138,7 @@ def generate_html(article: Article, template: Template) -> str:
         detailedInformation=article.detailed_info,
         formattedAddress=article.formatted_address,
         locationWebsite=article.business_url,
-        city="City", # placeholder for now
+        city=article.city, # placeholder for now
         sources=article.sources,
         images=article.images,
         slug=article.slug
@@ -194,6 +195,7 @@ def fetch_articles(url: str) -> list[Article]:
                 detailed_info=main_html,
                 formatted_address=data["FormattedAddress"],
                 business_url=data["WebsiteURL"],
+                city=data["City"],
                 sources=data["Sources"],
                 images=images_list,
                 slug=data["Slug"]

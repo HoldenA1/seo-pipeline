@@ -65,6 +65,7 @@ def main():
                 detailed_info=clean(generated_content['detailed_info']),
                 formatted_address=place.formatted_address,
                 business_url=place.business_url,
+                city=place.city,
                 sources=generated_content['sources'],
                 slug=clean(generated_content['slug']),
                 images=[] # populate later
@@ -147,7 +148,7 @@ def write_article_to_cms(article: Article, url: str):
             "DetailedInformation": article.detailed_info,
             "FormattedAddress": article.formatted_address,
             "WebsiteURL": article.business_url,
-            "City": "", # Add this later
+            "City": article.city,
             "Sources": article.sources,
             "Images": article.images,
             "Slug": article.slug,
