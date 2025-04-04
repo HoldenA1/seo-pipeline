@@ -10,6 +10,7 @@ import requests
 from shared.schema import Article, Review
 from jinja2 import Template
 import markdown
+import json
 from flask import Flask, request, jsonify
 
 # Constants
@@ -17,6 +18,7 @@ STRAPI_URL = "http://localhost:1337/api/articles"
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_PATH = os.path.join(CUR_DIR, "template.html")
 WEBSITE_FOLDER = os.path.join(PROJECT_ROOT, "website")
+LAST_PROCESSED_FILE = os.path.join(CUR_DIR, "last_online.json")
 from shared.keys import STRAPI_API_KEY, STRAPI_WEBHOOK_KEY
 
 # Create webhook endpoint
@@ -31,6 +33,9 @@ f.close()
 def main():
     # Create output directory
     os.makedirs(WEBSITE_FOLDER, exist_ok=True)
+
+    # Create articles published since last online
+    recover_missed_articles()
 
     # Start flask endpoint
     app.run(host='0.0.0.0', port=8080)
@@ -54,52 +59,104 @@ def strapi_webhook():
 
     if hook_data.get("event") == "entry.publish":
         article_data = hook_data.get("entry", {})
-
-        # Convert markdown to html
-        main_html = markdown.markdown(article_data["DetailedInformation"])
-        # Create reviews list
-        reviews_list = []
-        for rev_data in article_data["SampleReviews"]:
-            review = Review(
-                author_name=rev_data["AuthorName"],
-                author_profile_url=rev_data["AuthorProfileURL"],
-                author_photo_url=rev_data["AuthorPhotoURL"],
-                rating=rev_data["Rating"],
-                time_published=rev_data["TimePublished"],
-                content=rev_data["Review"]
-            )
-            reviews_list.append(review)
-            
-        # Create images list
-        images_list = []
-        for img in article_data["Images"]:
-            images_list.append(img["formats"]["medium"]["url"])
-
-        article = Article(
-            title=article_data["Title"],
-            place_name=article_data["PlaceName"],
-            place_id=article_data["PlaceID"],
-            general_summary=article_data["Summary"],
-            seo_meta=article_data["SEOMetaDescription"],
-            rating=article_data["Rating"],
-            reviews_count=article_data["ReviewsCount"],
-            reviews_summary=article_data["ReviewsSummary"],
-            reviews=reviews_list,
-            detailed_info=main_html,
-            formatted_address=article_data["FormattedAddress"],
-            business_url=article_data["WebsiteURL"],
-            city=article_data["City"],
-            sources=article_data["Sources"],
-            images=images_list,
-            slug=article_data["Slug"]
-        )
-        html = generate_html(article, template)
-
-        with open(f"{WEBSITE_FOLDER}/{article.slug}.html", "w") as f:
-            f.write(html)
-            print(f"Made page {article.slug}")
+        article = process_article_data(article_data)
+        write_article(article)
 
     return jsonify({"status": "received"}), 200
+
+
+def load_last_timestamp():
+    if os.path.exists(LAST_PROCESSED_FILE):
+        with open(LAST_PROCESSED_FILE, "r") as file:
+            return json.load(file).get("last_timestamp", 0)
+    return 0
+
+
+def save_last_timestamp(timestamp):
+    with open(LAST_PROCESSED_FILE, "w") as file:
+        json.dump({"last_timestamp": timestamp}, file)
+
+
+def fetch_articles_since(timestamp):
+    articles = []
+    params = {
+        "filters[publishedAt][$gt]": timestamp,
+        "pagination[limit]": 100,
+        "populate": "*" # Fetch all relations, including images
+    }
+    headers = { "Authorization": f"Bearer {STRAPI_API_KEY}" }
+
+    # Send the request
+    response = requests.get(STRAPI_URL, headers=headers, params=params)
+
+    if response.status_code == 200: # Check response
+        json = response.json()
+        for data in json["data"]:
+            articles.append(process_article_data(data))
+
+    return articles
+
+
+def recover_missed_articles():
+    last_timestamp = load_last_timestamp()
+    articles = fetch_articles_since(last_timestamp)
+    for article in articles:
+        write_article(article)
+
+
+def process_article_data(article_data: dict) -> Article:
+    # Convert markdown to html
+    main_html = markdown.markdown(article_data["DetailedInformation"])
+    # Create reviews list
+    reviews_list = []
+    for rev_data in article_data["SampleReviews"]:
+        review = Review(
+            author_name=rev_data["AuthorName"],
+            author_profile_url=rev_data["AuthorProfileURL"],
+            author_photo_url=rev_data["AuthorPhotoURL"],
+            rating=rev_data["Rating"],
+            time_published=rev_data["TimePublished"],
+            content=rev_data["Review"]
+        )
+        reviews_list.append(review)
+        
+    # Create images list
+    images_list = []
+    for img in article_data["Images"]:
+        if "medium" in img["formats"]:
+            images_list.append(img["formats"]["medium"]["url"])
+        elif "small" in img["formats"]:
+            images_list.append(img["formats"]["small"]["url"])
+
+    article = Article(
+        title=article_data["Title"],
+        place_name=article_data["PlaceName"],
+        place_id=article_data["PlaceID"],
+        general_summary=article_data["Summary"],
+        seo_meta=article_data["SEOMetaDescription"],
+        rating=article_data["Rating"],
+        reviews_count=article_data["ReviewsCount"],
+        reviews_summary=article_data["ReviewsSummary"],
+        reviews=reviews_list,
+        detailed_info=main_html,
+        formatted_address=article_data["FormattedAddress"],
+        business_url=article_data["WebsiteURL"],
+        city=article_data["City"],
+        sources=article_data["Sources"],
+        images=images_list,
+        slug=article_data["Slug"],
+        timestamp=article_data["publishedAt"]
+    )
+    return article
+
+
+def write_article(article: Article):
+    html = generate_html(article, template)
+
+    with open(f"{WEBSITE_FOLDER}/{article.slug}.html", "w") as f:
+        f.write(html)
+        print(f"Made page {article.slug}")
+        save_last_timestamp(article.timestamp)
 
 
 def generate_html(article: Article, template: Template) -> str:
@@ -145,65 +202,6 @@ def generate_html(article: Article, template: Template) -> str:
     )
     return html_content
         
-
-def fetch_articles(url: str) -> list[Article]:
-    """Pulls article data from the CMS"""
-    articles = []
-    params = { "populate": "*" } # Fetch all relations, including images
-    headers = { "Authorization": f"Bearer {STRAPI_API_KEY}" }
-
-    # Send the request
-    response = requests.get(url, headers=headers, params=params)
-
-    if response.status_code == 200: # Check response
-        json = response.json()
-        for data in json["data"]:
-            # Convert markdown to html
-            summary_html = markdown.markdown(data["Summary"])
-            review_summary_html = markdown.markdown(data["ReviewsSummary"])
-            main_html = markdown.markdown(data["DetailedInformation"])
-
-            # Create reviews list
-            reviews_list = []
-            for rev_data in data["SampleReviews"]:
-                review = Review(
-                    author_name=rev_data["AuthorName"],
-                    author_profile_url=rev_data["AuthorProfileURL"],
-                    author_photo_url=rev_data["AuthorPhotoURL"],
-                    rating=rev_data["Rating"],
-                    time_published=rev_data["TimePublished"],
-                    content=rev_data["Review"]
-                )
-                reviews_list.append(review)
-            
-            # Create images list
-            images_list = []
-            for img in data["Images"]:
-                #print(img)
-                images_list.append(img["formats"]["medium"]["url"])
-
-            article = Article(
-                title=data["Title"],
-                place_name=data["PlaceName"],
-                place_id=data["PlaceID"],
-                general_summary=summary_html,
-                seo_meta=data["SEOMetaDescription"],
-                rating=data["Rating"],
-                reviews_count=data["ReviewsCount"],
-                reviews_summary=review_summary_html,
-                reviews=reviews_list,
-                detailed_info=main_html,
-                formatted_address=data["FormattedAddress"],
-                business_url=data["WebsiteURL"],
-                city=data["City"],
-                sources=data["Sources"],
-                images=images_list,
-                slug=data["Slug"]
-            )
-            articles.append(article)
-
-    return articles
-
 
 # main script entry point
 if __name__ == "__main__":

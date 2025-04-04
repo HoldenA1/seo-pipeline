@@ -13,6 +13,8 @@ from shared.schema import Review, PlaceData, ArticleStatus
 from shared.keys import GOOGLE_MAPS_KEY
 from google.maps import places_v1
 
+import llm
+
 # Constants
 INCLUDED_FIELDS = [
     "display_name",
@@ -26,35 +28,46 @@ INCLUDED_FIELDS = [
     "location"
 ]
 FIELD_MASK = ','.join(INCLUDED_FIELDS)
+SEARCH_FIELDS = [
+    "places.display_name",
+    "places.id",
+    "places.formatted_address",
+    "places.types",
+    "places.rating",
+    "places.user_rating_count",
+    "places.website_uri",
+    "places.editorial_summary",
+    "places.location"
+]
+SEARCH_FIELD_MASK = ','.join(SEARCH_FIELDS)
+MAX_PHOTO_HEIGHT = 400
+MAX_PHOTO_WIDTH = 800
 
 
 def main():
     """Main scout loop"""
     scout = Scout()
 
-    ids = [
-        "ChIJF8VqETS3j4ARxmLCuGE7dzk",
-        "ChIJUzd2sz62j4ARaPfiq1rRSNQ"
-    ]
-    for id in ids:
-        # pull data
-        print("fetching data...")
-        place = scout.fetch_place(id, FIELD_MASK)
-        data = PlaceData(
-            place_id=place.id,
-            place_name=place.display_name.text,
-            general_summary=place.editorial_summary.text,
-            rating=place.rating,
-            reviews_count=place.user_rating_count,
-            formatted_address=place.formatted_address,
-            business_url=place.website_uri,
-            city=scout.get_city(place.location.latitude, place.location.longitude)
-        )
-        print("storing data...")
-        db.store_places([data])
-        print("downloading reviews and photos...")
-        scout.mark_place_as_filtered(id)
-        print("done.")
+    searches = [("Restaurants", "Austin, TX")]
+
+    for activity, location in searches:
+        # search for new places
+        print(f"Searching for {activity} in {location}")
+        scouted_places = scout.search_text(activity, location)
+        db.store_places(scouted_places)
+
+        # filter places
+        print("Filtering places")
+        scouted_places = db.get_places_by_status(ArticleStatus.SCOUTED)
+        filtered_ids = llm.filter_places(scouted_places)
+        print(f"Filtered ids: {filtered_ids}")
+        for place in scouted_places:
+            if place.place_id in filtered_ids:
+                # good for meetups
+                scout.mark_place_as_filtered(place.place_id)
+            else:
+                # filtered by ai
+                db.update_place_status(place.place_id, ArticleStatus.REJECTED)
 
 
 class Scout:
@@ -116,7 +129,8 @@ class Scout:
 
         request = places_v1.GetPhotoMediaRequest(
             name=f"{photo_ref.name}/media",
-            max_width_px=photo_ref.width_px
+            max_width_px=MAX_PHOTO_WIDTH,
+            max_height_px=MAX_PHOTO_HEIGHT
         )
         # Fetch the photo
         response = self.client.get_photo_media(request=request)
@@ -143,7 +157,7 @@ class Scout:
         request = places_v1.SearchTextRequest(
             text_query = f"{activity} in {location}",
         )
-        response = self.client.search_text(request, metadata=[("x-goog-fieldmask", FIELD_MASK)])
+        response = self.client.search_text(request, metadata=[("x-goog-fieldmask", SEARCH_FIELD_MASK)])
 
         places = []
         for place in response.places:
@@ -155,7 +169,8 @@ class Scout:
                     rating=place.rating,
                     reviews_count=place.user_rating_count,
                     formatted_address=place.formatted_address,
-                    business_url=place.website_uri
+                    business_url=place.website_uri,
+                    city=self.get_city(place.location.latitude, place.location.longitude)
                 )
             )
 
@@ -165,9 +180,11 @@ class Scout:
         """This function downloads the reviews and photos for the specified place
         then marks it as filtered in the database.
         """
+        print("Getting Reviews")
         reviews = self.fetch_reviews(place_id)
         db.store_reviews(reviews, place_id)
 
+        print("Fetching photos")
         photos = self.fetch_photos(place_id)
         for idx, photo in enumerate(photos):
             dir = os.path.join(PHOTOS_FOLDER, place_id)

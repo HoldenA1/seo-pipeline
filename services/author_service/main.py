@@ -12,9 +12,9 @@ sys.path.append(PROJECT_ROOT)
 
 import requests
 import glob
-from shared.schema import Article, Review, ArticleStatus
+from shared.schema import Article, ArticleStatus
 import shared.database as db
-from llm import generate_article_content
+import llm
 import re
 
 # Constants
@@ -35,8 +35,8 @@ def main():
             print(f"Writing an article on {place.place_name}")
 
             while True: # Do while loop
-                print("Generating content...")
-                generated_content = generate_article_content(
+                print("Generating fields...")
+                generated_fields = llm.generate_fields(
                     place.place_name,
                     place.rating,
                     place.reviews_count,
@@ -44,31 +44,40 @@ def main():
                     place.formatted_address,
                     place.business_url
                 )
-                if "error" in generated_content:
+                if "error" in generated_fields:
                     # If the LLM generated poorly formatted content, try again
-                    print(generated_content["error"])
-                    print(f"Raw response from LLM: {generated_content["raw_response"]}\n")
+                    print(generated_fields["error"])
+                    print(f"Raw response from LLM: {generated_fields["raw_response"]}\n")
                 else:
                     break
 
+            generated_content = llm.generate_detailed_content(
+                place.place_name,
+                place.rating,
+                place.reviews_count,
+                place.general_summary,
+                place.formatted_address,
+                place.business_url
+            )
 
             article = Article(
-                title=clean(generated_content['title']),
+                title=clean(generated_fields['title']),
                 place_name=place.place_name,
                 place_id=place.place_id,
-                general_summary=clean(generated_content['general_summary']),
-                seo_meta=clean(generated_content['seo_meta']),
+                general_summary=clean(generated_fields['general_summary']),
+                seo_meta=clean(generated_fields['seo_meta']),
                 rating=place.rating,
                 reviews_count=place.reviews_count,
-                reviews_summary=clean(generated_content['reviews_summary']),
+                reviews_summary=clean(generated_fields['reviews_summary']),
                 reviews=db.get_reviews(place.place_id),
-                detailed_info=clean(generated_content['detailed_info']),
+                detailed_info=clean(generated_content),
                 formatted_address=place.formatted_address,
                 business_url=place.business_url,
                 city=place.city,
-                sources=generated_content['sources'],
-                slug=clean(generated_content['slug']),
-                images=[] # populate later
+                sources=generated_fields['sources'],
+                slug=clean(generated_fields['slug']),
+                images=[], # populate later
+                timestamp=None
             )
 
             # Upload photos
@@ -164,9 +173,9 @@ def write_article_to_cms(article: Article, url: str):
 
 def clean(data: str):
     # Sometimes the llm prepends a : or - to the field. Why? I don't know.
-    remove_colons = re.sub(r'^:+', '', data)
-    remove_hyphens = re.sub(r'^-+', '', remove_colons)
-    return remove_hyphens
+    # remove_colons = re.sub(r'^:+', '', data)
+    # remove_hyphens = re.sub(r'^-+', '', remove_colons)
+    return data
 
 
 # main script entry point

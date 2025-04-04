@@ -40,6 +40,7 @@ class Article:
     sources: list[str]
     images: list[dict]
     slug: str
+    timestamp: str
 
 @dataclass
 class PlaceData:
