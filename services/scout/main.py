@@ -2,7 +2,6 @@
 import requests, os
 import shared.database as db
 from shared.schema import Review, PlaceData, ArticleStatus
-from shared.keys import GOOGLE_MAPS_KEY
 from google.maps import places_v1
 
 import llm
@@ -34,18 +33,19 @@ SEARCH_FIELDS = [
 SEARCH_FIELD_MASK = ','.join(SEARCH_FIELDS)
 MAX_PHOTO_HEIGHT = 400
 MAX_PHOTO_WIDTH = 800
+GOOGLE_MAPS_KEY = os.getenv("GOOGLE_MAPS_KEY")
 
 
 def main():
     """Main scout loop"""
     scout = Scout()
 
-    searches = []#[("Restaurants", "Boulder, CO")]
+    searches = [("Restaurants", "San Francisco, CA")]
 
-    db.update_place_status("ChIJ5TW3jDDsa4cRkSewKsCsNSE", ArticleStatus.FILTERED)
+    db.update_place_status("ChIJ5TW3jDDsa4cRkSewKsCsNSE", ArticleStatus.SCOUTED)
 
-    scouted_places = db.get_places_by_status(ArticleStatus.FILTERED)
-    print(scouted_places)
+    # scouted_places = db.get_places_by_status(ArticleStatus.FILTERED)
+    # print(scouted_places)
 
     for activity, location in searches:
         # search for new places
@@ -75,6 +75,7 @@ class Scout:
         self.client = places_v1.PlacesClient()
 
     def get_city(self, lat: float, lng: float) -> str:
+        if GOOGLE_MAPS_KEY == None: raise Exception('No Google Maps key found in environment.')
         url = f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lng}&key={GOOGLE_MAPS_KEY}"
         response = requests.get(url)
         data = response.json()

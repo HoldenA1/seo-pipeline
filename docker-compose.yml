@@ -20,6 +20,7 @@ services:
       DB_USER: ${DB_USERNAME}
       DB_PASS: ${DB_PASSWORD}
       GOOGLE_APPLICATION_CREDENTIALS: /secrets/service-account-key.json
+      GOOGLE_MAPS_KEY: ${GOOGLE_MAPS_KEY}
     volumes:
       - ./shared:/app/shared
       - /home/holden/Downloads/rallyvite-seo-page-builder-ee153e588050.json:/secrets/service-account-key.json
