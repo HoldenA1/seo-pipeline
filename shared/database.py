@@ -10,7 +10,7 @@ from shared.schema import PlaceData, Review, ArticleStatus
 # Database config
 DB_USER = os.getenv("DB_USER", "aiuser")
 DB_PASS = os.getenv("DB_PASS", "aipassword")
-DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_HOST = os.getenv("DB_HOST", "postgres")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "aidb")
 
@@ -18,36 +18,36 @@ DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{
 engine = create_engine(DATABASE_URL, echo=False)
 
 # Database and helper methods
-def init_db():
-    """Create the database if it doesn't already exist"""
-    with engine.begin() as conn:
-        # Create a table to store Google Places data
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS places (
-                id TEXT PRIMARY KEY,
-                name TEXT,
-                address TEXT,
-                rating REAL,
-                reviews_count REAL,
-                editorial_summary TEXT,
-                business_site TEXT,
-                city TEXT,
-                status INT
-            )
-        """))
-        # Ensure the reviews table exists
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS reviews (
-                id SERIAL PRIMARY KEY,
-                place_id TEXT REFERENCES places(id) ON DELETE CASCADE,
-                author_name TEXT,
-                author_uri TEXT,
-                author_photo TEXT,
-                rating REAL,
-                publish_time TEXT,
-                review_text TEXT
-            )
-        """))
+# def init_db():
+#     """Create the database if it doesn't already exist"""
+#     with engine.begin() as conn:
+#         # Create a table to store Google Places data
+#         conn.execute(text("""
+#             CREATE TABLE IF NOT EXISTS places (
+#                 id TEXT PRIMARY KEY,
+#                 name TEXT,
+#                 address TEXT,
+#                 rating REAL,
+#                 reviews_count REAL,
+#                 editorial_summary TEXT,
+#                 business_site TEXT,
+#                 city TEXT,
+#                 status INT
+#             )
+#         """))
+#         # Ensure the reviews table exists
+#         conn.execute(text("""
+#             CREATE TABLE IF NOT EXISTS reviews (
+#                 id SERIAL PRIMARY KEY,
+#                 place_id TEXT REFERENCES places(id) ON DELETE CASCADE,
+#                 author_name TEXT,
+#                 author_uri TEXT,
+#                 author_photo TEXT,
+#                 rating REAL,
+#                 publish_time TEXT,
+#                 review_text TEXT
+#             )
+#         """))
 
 def get_places(query: TextClause, params: dict) -> list[PlaceData]:
     """Returns a list of places that match the SQL query string"""

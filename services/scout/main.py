@@ -1,13 +1,5 @@
 """Main file for the scout service"""
-
-# Make shared files accessible
-import sys
-import os
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-PHOTOS_FOLDER = os.path.abspath(os.path.join(PROJECT_ROOT, "shared/scraped_photos"))
-sys.path.append(PROJECT_ROOT)
-
-import requests
+import requests, os
 import shared.database as db
 from shared.schema import Review, PlaceData, ArticleStatus
 from shared.keys import GOOGLE_MAPS_KEY
@@ -48,34 +40,39 @@ def main():
     """Main scout loop"""
     scout = Scout()
 
-    searches = [("Restaurants", "Austin, TX")]
+    searches = []#[("Restaurants", "Boulder, CO")]
+
+    db.update_place_status("ChIJ5TW3jDDsa4cRkSewKsCsNSE", ArticleStatus.FILTERED)
+
+    scouted_places = db.get_places_by_status(ArticleStatus.FILTERED)
+    print(scouted_places)
 
     for activity, location in searches:
         # search for new places
-        print(f"Searching for {activity} in {location}")
+        print(f"Searching for {activity} in {location}...")
         scouted_places = scout.search_text(activity, location)
+        print(f"Found {len(scouted_places)} places from search.")
+        print("Storing places in db...")
         db.store_places(scouted_places)
 
         # filter places
-        print("Filtering places")
-        scouted_places = db.get_places_by_status(ArticleStatus.SCOUTED)
-        filtered_ids = llm.filter_places(scouted_places)
-        print(f"Filtered ids: {filtered_ids}")
-        for place in scouted_places:
-            if place.place_id in filtered_ids:
-                # good for meetups
-                scout.mark_place_as_filtered(place.place_id)
-            else:
-                # filtered by ai
-                db.update_place_status(place.place_id, ArticleStatus.REJECTED)
+        # print("Filtering places")
+        # scouted_places = db.get_places_by_status(ArticleStatus.SCOUTED)
+        # filtered_ids = llm.filter_places(scouted_places)
+        # print(f"Filtered ids: {filtered_ids}")
+        # for place in scouted_places:
+        #     if place.place_id in filtered_ids:
+        #         # good for meetups
+        #         scout.mark_place_as_filtered(place.place_id)
+        #     else:
+        #         # filtered by ai
+        #         db.update_place_status(place.place_id, ArticleStatus.REJECTED)
 
 
 class Scout:
 
     def __init__(self):
         self.client = places_v1.PlacesClient()
-        # Initialize db on startup
-        db.init_db()
 
     def get_city(self, lat: float, lng: float) -> str:
         url = f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lng}&key={GOOGLE_MAPS_KEY}"
@@ -187,6 +184,7 @@ class Scout:
         print("Fetching photos")
         photos = self.fetch_photos(place_id)
         for idx, photo in enumerate(photos):
+            PHOTOS_FOLDER = "Get these pulled to google cloud storage"
             dir = os.path.join(PHOTOS_FOLDER, place_id)
             os.makedirs(dir, exist_ok=True)
             self.download_photo(photo, f"photo_{idx}", dir)

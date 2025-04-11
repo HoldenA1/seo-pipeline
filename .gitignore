@@ -2,3 +2,4 @@
 rallyvite\ cms\ test/
 keys.py
 __pycache__/
+.env

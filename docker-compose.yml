@@ -1,0 +1,65 @@
+version: '1.0'
+
+services:
+  author:
+    build: ./services/author
+    environment:
+      DATABASE_URL: postgres://your_user:your_password@postgres:5432/your_database
+    depends_on:
+      - postgres
+    ports:
+      - "8001:80"
+    networks:
+      - app_network
+
+  scout:
+    build: ./services/scout/
+    depends_on:
+      - postgres
+    environment:
+      DB_USER: ${DB_USERNAME}
+      DB_PASS: ${DB_PASSWORD}
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/service-account-key.json
+    volumes:
+      - ./shared:/app/shared
+      - /home/holden/Downloads/rallyvite-seo-page-builder-ee153e588050.json:/secrets/service-account-key.json
+    networks:
+      - app_network
+
+  strapi:
+    build: ./strapi
+    ports:
+      - "1337:1337"
+    networks:
+      - app_network
+
+  ssg:
+    build: ./services/ssg
+    ports:
+      - "8003:80"
+    networks:
+      - app_network
+
+  static-site:
+    build: ./static-site
+    ports:
+      - "80:80"
+    networks:
+      - app_network
+
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: aidb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./services/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
