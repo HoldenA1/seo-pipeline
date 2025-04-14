@@ -1,0 +1,14 @@
+pydantic==2.11.1
+pydantic_core==2.33.0
+psycopg2-binary==2.9.10
+requests==2.32.3
+SQLAlchemy==2.0.40
+typing-inspection==0.4.0
+typing_extensions==4.13.0
+annotated-types==0.7.0
+certifi==2025.1.31
+charset-normalizer==3.4.1
+idna==3.10
+urllib3==2.3.0
+mdformat==0.7.22
+markdown-it-py==3.0.0

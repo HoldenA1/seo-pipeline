@@ -39,14 +39,7 @@ GOOGLE_MAPS_KEY = os.getenv("GOOGLE_MAPS_KEY")
 def main():
     """Main scout loop"""
     scout = Scout()
-
-    searches = [("Restaurants", "San Francisco, CA")]
-
-    db.update_place_status("ChIJ5TW3jDDsa4cRkSewKsCsNSE", ArticleStatus.SCOUTED)
-
-    # scouted_places = db.get_places_by_status(ArticleStatus.FILTERED)
-    # print(scouted_places)
-
+    searches = [("Restaurants", "San Jose, CA")]
     for activity, location in searches:
         # search for new places
         print(f"Searching for {activity} in {location}...")
@@ -54,19 +47,18 @@ def main():
         print(f"Found {len(scouted_places)} places from search.")
         print("Storing places in db...")
         db.store_places(scouted_places)
-
         # filter places
-        # print("Filtering places")
-        # scouted_places = db.get_places_by_status(ArticleStatus.SCOUTED)
-        # filtered_ids = llm.filter_places(scouted_places)
-        # print(f"Filtered ids: {filtered_ids}")
-        # for place in scouted_places:
-        #     if place.place_id in filtered_ids:
-        #         # good for meetups
-        #         scout.mark_place_as_filtered(place.place_id)
-        #     else:
-        #         # filtered by ai
-        #         db.update_place_status(place.place_id, ArticleStatus.REJECTED)
+        print("Filtering places")
+        scouted_places = db.get_places_by_status(ArticleStatus.SCOUTED)
+        filtered_ids = llm.filter_places(scouted_places)
+        print(f"Filtered ids: {filtered_ids}")
+        for place in scouted_places:
+            if place.place_id in filtered_ids:
+                # good for meetups
+                scout.mark_place_as_filtered(place.place_id)
+            else:
+                # filtered by ai
+                db.update_place_status(place.place_id, ArticleStatus.REJECTED)
 
 
 class Scout:
@@ -79,7 +71,6 @@ class Scout:
         url = f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lng}&key={GOOGLE_MAPS_KEY}"
         response = requests.get(url)
         data = response.json()
-
         if data["status"] == "OK":
             for result in data["results"]:
                 for component in result["address_components"]:
@@ -105,7 +96,6 @@ class Scout:
     
     def fetch_reviews(self, place_id: str) -> list[Review]:
         response = self.fetch_place(place_id, "reviews")
-
         reviews = []
         for review in response.reviews:
             author = review.author_attribution
@@ -119,12 +109,10 @@ class Scout:
                     content=review.text.text
                 )
             )
-
         return reviews
 
     def download_photo(self, photo_ref: places_v1.Photo, filename: str, photos_dir: str):
         """Downloads a photo given a photo reference."""
-
         request = places_v1.GetPhotoMediaRequest(
             name=f"{photo_ref.name}/media",
             max_width_px=MAX_PHOTO_WIDTH,
@@ -141,22 +129,18 @@ class Scout:
 
     def download_place_photos(self, place_id: str, photos_dir: str):
         photo_references = self.fetch_photos(place_id)
-
         place_photos_dir = os.path.join(photos_dir, place_id)
         os.makedirs(place_photos_dir, exist_ok=True)
-
         # Download each photo
         for idx, photo_ref in enumerate(photo_references):
             self.download_photo(photo_ref, str(idx), place_photos_dir)
 
     def search_text(self, activity: str, location: str) -> list[PlaceData]:
         """Searches for businesses fitting activity in the location provided"""
-
         request = places_v1.SearchTextRequest(
             text_query = f"{activity} in {location}",
         )
         response = self.client.search_text(request, metadata=[("x-goog-fieldmask", SEARCH_FIELD_MASK)])
-
         places = []
         for place in response.places:
             places.append(
@@ -171,7 +155,6 @@ class Scout:
                     city=self.get_city(place.location.latitude, place.location.longitude)
                 )
             )
-
         return places
     
     def mark_place_as_filtered(self, place_id: str):
@@ -181,15 +164,13 @@ class Scout:
         print("Getting Reviews")
         reviews = self.fetch_reviews(place_id)
         db.store_reviews(reviews, place_id)
-
         print("Fetching photos")
         photos = self.fetch_photos(place_id)
         for idx, photo in enumerate(photos):
-            PHOTOS_FOLDER = "Get these pulled to google cloud storage"
+            PHOTOS_FOLDER = "/tmp/photos"
             dir = os.path.join(PHOTOS_FOLDER, place_id)
             os.makedirs(dir, exist_ok=True)
             self.download_photo(photo, f"photo_{idx}", dir)
-
         db.update_place_status(place_id, ArticleStatus.FILTERED)
 
 

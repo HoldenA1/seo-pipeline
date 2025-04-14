@@ -4,14 +4,10 @@ import requests
 import json
 import mdformat
 from pydantic import BaseModel, Field
-
-# Make shared files accessible
-import sys
 import os
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-sys.path.append(PROJECT_ROOT)
-from shared.keys import PERPLEXITY_AI_KEY
 
+# Constants
+PERPLEXITY_AI_KEY = os.getenv("PERPLEXITY_AI_KEY")
 API_ENDPOINT = "https://api.perplexity.ai/chat/completions"
 FIELDS_SYSTEM_PROMPT = """You are a professional author that generates pages on businesses.
 

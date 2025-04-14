@@ -1,10 +1,8 @@
 """This file is the main static site generator"""
 
 # Make shared files accessible
-import sys
-import os
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-sys.path.append(PROJECT_ROOT)
+import sys, os, time
+sys.path.append("/app/shared")
 
 import requests
 from shared.schema import Article, Review
@@ -14,12 +12,13 @@ import json
 from flask import Flask, request, jsonify
 
 # Constants
-STRAPI_URL = "http://localhost:1337/api/articles"
-CUR_DIR = os.path.dirname(os.path.abspath(__file__))
-TEMPLATE_PATH = os.path.join(CUR_DIR, "template.html")
-WEBSITE_FOLDER = os.path.join(PROJECT_ROOT, "website")
-LAST_PROCESSED_FILE = os.path.join(CUR_DIR, "last_online.json")
-from shared.keys import STRAPI_API_KEY, STRAPI_WEBHOOK_KEY
+STRAPI_BASE_URL = os.getenv("STRAPI_BASE_URL", "http://localhost:1337")
+STRAPI_ARTICLE_URL = f"{STRAPI_BASE_URL}/api/articles"
+TEMPLATE_PATH = "/app/template.html"
+WEBSITE_FOLDER = "/app/website"
+LAST_PROCESSED_FILE = "last_online.json"
+STRAPI_API_KEY = os.getenv("STRAPI_API_KEY")
+STRAPI_WEBHOOK_KEY = os.getenv("STRAPI_WEBHOOK_KEY")
 
 # Create webhook endpoint
 app = Flask(__name__)
@@ -31,8 +30,8 @@ f.close()
 
 
 def main():
-    # Create output directory
-    os.makedirs(WEBSITE_FOLDER, exist_ok=True)
+    # First, check strapi connection
+    wait_for_strapi()
 
     # Create articles published since last online
     recover_missed_articles()
@@ -64,13 +63,24 @@ def strapi_webhook():
 
     return jsonify({"status": "received"}), 200
 
+def wait_for_strapi(max_retries=3, delay=5):
+    for attempt in range(max_retries):
+        try:
+            headers = { "Authorization": f"Bearer {STRAPI_API_KEY}" }
+            response = requests.get(STRAPI_ARTICLE_URL, headers=headers)
+            if response.ok:
+                print("Strapi is up and running!")
+                return True
+        except requests.exceptions.RequestException as e:
+            print(f"Attempt {attempt+1} failed: {e}")
+        time.sleep(delay)
+    raise Exception("Strapi did not become available in time.")
 
 def load_last_timestamp():
     if os.path.exists(LAST_PROCESSED_FILE):
         with open(LAST_PROCESSED_FILE, "r") as file:
             return json.load(file).get("last_timestamp", 0)
     return 0
-
 
 def save_last_timestamp(timestamp):
     with open(LAST_PROCESSED_FILE, "w") as file:
@@ -87,7 +97,7 @@ def fetch_articles_since(timestamp):
     headers = { "Authorization": f"Bearer {STRAPI_API_KEY}" }
 
     # Send the request
-    response = requests.get(STRAPI_URL, headers=headers, params=params)
+    response = requests.get(STRAPI_ARTICLE_URL, headers=headers, params=params)
 
     if response.status_code == 200: # Check response
         json = response.json()

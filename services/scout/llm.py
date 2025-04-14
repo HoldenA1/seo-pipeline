@@ -9,9 +9,10 @@ import sys
 import os
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(PROJECT_ROOT)
-from shared.keys import PERPLEXITY_AI_KEY
 from shared.schema import PlaceData
 
+# Constants
+PERPLEXITY_AI_KEY = os.getenv("PERPLEXITY_AI_KEY")
 API_ENDPOINT = "https://api.perplexity.ai/chat/completions"
 SYSTEM_PROMPT = """
 Given a list of places, your job is to filter places that would be bad for group hang outs with friends or family. We want to filter out places like chain restaurants, take-out only restaurants or place no one would go to for a meetup. Only filter out places that with something specific that forces them to be removed. A restaurant with mixed reviews should still be included as people might want to meetup there.

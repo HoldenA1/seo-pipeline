@@ -1,65 +1,75 @@
-version: '1.0'
-
 services:
   author:
     build: ./services/author
     environment:
-      DATABASE_URL: postgres://your_user:your_password@postgres:5432/your_database
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+      PERPLEXITY_AI_KEY: ${PERPLEXITY_AI_KEY}
+      STRAPI_API_KEY: ${STRAPI_API_KEY}
+      STRAPI_BASE_URL: ${STRAPI_BASE_URL}
+    volumes:
+      - ./shared:/app/shared
+      - shared-temp:/tmp/photos
     depends_on:
       - postgres
-    ports:
-      - "8001:80"
     networks:
       - app_network
 
   scout:
-    build: ./services/scout/
+    build: ./services/scout
     depends_on:
       - postgres
     environment:
-      DB_USER: ${DB_USERNAME}
-      DB_PASS: ${DB_PASSWORD}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
       GOOGLE_APPLICATION_CREDENTIALS: /secrets/service-account-key.json
       GOOGLE_MAPS_KEY: ${GOOGLE_MAPS_KEY}
+      PERPLEXITY_AI_KEY: ${PERPLEXITY_AI_KEY}
     volumes:
       - ./shared:/app/shared
+      - shared-temp:/tmp/photos
       - /home/holden/Downloads/rallyvite-seo-page-builder-ee153e588050.json:/secrets/service-account-key.json
-    networks:
-      - app_network
-
-  strapi:
-    build: ./strapi
-    ports:
-      - "1337:1337"
     networks:
       - app_network
 
   ssg:
     build: ./services/ssg
+    environment:
+      STRAPI_API_KEY: ${STRAPI_API_KEY}
+      STRAPI_BASE_URL: ${STRAPI_BASE_URL}
+      STRAPI_WEBHOOK_KEY: ${STRAPI_WEBHOOK_KEY}
+    volumes:
+      - ./website:/app/website
+      - ./shared:/app/shared
     ports:
-      - "8003:80"
+      - "8080:8080"
     networks:
       - app_network
 
-  static-site:
-    build: ./static-site
+  site:
+    image: nginx:alpine
+    container_name: static-site
     ports:
-      - "80:80"
-    networks:
-      - app_network
+      - "8000:80"  # Serve on localhost:8080
+    volumes:
+      - ./website:/usr/share/nginx/html:ro
 
   postgres:
     image: postgres:13
     environment:
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: aidb
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
     ports:
       - "5432:5432"
     volumes:
       - ./services/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - app_network
+
+volumes:
+  shared-temp:
 
 networks:
   app_network:
