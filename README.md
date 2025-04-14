@@ -8,20 +8,26 @@ This project is intended to be an automated pipeline that generates articles usi
 - [ ] Add testing
 - [ ] Work on logging for services
 - [X] Add hooks for site generator to auto-update
-- [ ] Filtering of places for scout
+- [X] Filtering of places for scout
 - [ ] Implement activities and locations files into scout
-- [ ] Fix city issue
-- [ ] If site generator service is down, be able to generate missed webhook sites when generator is back up
+- [X] Fix city issue
+- [X] If site generator service is down, be able to generate missed webhook sites when generator is back up
 - [ ] Evalute speed of page generation
+- [X] Dockerize services for deployment
+
+## Architecture Diagram
+
+![Diagram](assets/architecture_diagram.png)
 
 ## Project Structure
 
 ### Folders
 
 - services
-  - author_service
-  - scout_service
-  - site_generator_service
+  - author
+  - scout
+  - ssg
+  - db
 - shared
 - website
 
@@ -39,7 +45,7 @@ The author service takes business data that was scraped by the scout and prompts
 
 This service should be set up as a cron job to run periodically. It generates articles as long as there articles the scout has vetted. Once it runs out of vetted articles to search, it will exit to save compute power. It shoud be periodically run to begin generating content again if it exits.
 
-#### Site Generator
+#### Site Generator (SSG)
 
 The site generator service gets data from the CMS and turns the content into pre-rendered html pages that can be served to users quickly.
 
@@ -48,3 +54,7 @@ This is actually a flask server and acts as an endpoint for a strapi webhook. Th
 #### Strapi CMS
 
 This is a third party content managament system that we are using to store the article content. It allows for anyone (with proper login info) to edit the pages' content.
+
+#### Database
+
+Currently I'm using a postgres database for storing data needed by the author and scout

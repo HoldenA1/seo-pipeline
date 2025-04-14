@@ -30,7 +30,7 @@ services:
     volumes:
       - ./shared:/app/shared
       - shared-temp:/tmp/photos
-      - /home/holden/Downloads/rallyvite-seo-page-builder-ee153e588050.json:/secrets/service-account-key.json
+      - ${SERVICE_ACCOUNT_KEY_PATH}:/secrets/service-account-key.json
     networks:
       - app_network
 
