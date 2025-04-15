@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="We have tons of articles on businesses around the country. Take a look to find amazing meetup spots nearby!">
+    <title>Directory of States</title>
+    <link rel="stylesheet" href="./css/directory.css">
+</head>
+<body>
+    <main>
+        <article>
+
+            <header>
+                <h1>To find great places near you, pick the city you live in.</h1>
+            </header>
+
+            <section id="state-directory">
+            {% for state in states %}
+                    <div class="my-slides">
+                        <div class="numbertext">{{ loop.index }} / {{ loop.length }}</div>
+                        <img class="fade" src="//localhost:1337{{ image }}">
+                    </div>
+            {% endfor %}
+            </section>
+    </main>
+</body>
+</html>
