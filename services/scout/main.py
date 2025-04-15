@@ -1,7 +1,7 @@
 """Main file for the scout service"""
 import requests, os
 import shared.database as db
-from shared.schema import Review, PlaceData, ArticleStatus
+from shared.schema import Review, PlaceData, ArticleStatus, Location
 from google.maps import places_v1
 
 import llm
@@ -12,6 +12,7 @@ INCLUDED_FIELDS = [
     "id",
     "formatted_address",
     "types",
+    "primary_type",
     "rating",
     "user_rating_count",
     "website_uri",
@@ -19,17 +20,7 @@ INCLUDED_FIELDS = [
     "location"
 ]
 FIELD_MASK = ','.join(INCLUDED_FIELDS)
-SEARCH_FIELDS = [
-    "places.display_name",
-    "places.id",
-    "places.formatted_address",
-    "places.types",
-    "places.rating",
-    "places.user_rating_count",
-    "places.website_uri",
-    "places.editorial_summary",
-    "places.location"
-]
+SEARCH_FIELDS = [f"places.{field}" for field in INCLUDED_FIELDS]
 SEARCH_FIELD_MASK = ','.join(SEARCH_FIELDS)
 MAX_PHOTO_HEIGHT = 400
 MAX_PHOTO_WIDTH = 800
@@ -39,7 +30,7 @@ GOOGLE_MAPS_KEY = os.getenv("GOOGLE_MAPS_KEY")
 def main():
     """Main scout loop"""
     scout = Scout()
-    searches = [("Restaurants", "San Jose, CA")]
+    searches = [("Bars", "Madison, WI")]
     for activity, location in searches:
         # search for new places
         print(f"Searching for {activity} in {location}...")
@@ -66,18 +57,21 @@ class Scout:
     def __init__(self):
         self.client = places_v1.PlacesClient()
 
-    def get_city(self, lat: float, lng: float) -> str:
+    def get_location(self, lat: float, lng: float) -> Location:
         if GOOGLE_MAPS_KEY == None: raise Exception('No Google Maps key found in environment.')
         url = f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lng}&key={GOOGLE_MAPS_KEY}"
         response = requests.get(url)
-        data = response.json()
-        if data["status"] == "OK":
-            for result in data["results"]:
-                for component in result["address_components"]:
-                    if "locality" in component["types"]:
-                        return component["long_name"]
-        
-        return None
+        results = response.json()["results"]
+        city = state = country = None
+        if results:
+            for component in results[0]["address_components"]:
+                if "locality" in component["types"]:
+                    city = component["long_name"]
+                elif "administrative_area_level_1" in component["types"]:
+                    state = component["long_name"]
+                elif "country" in component["types"]:
+                    country = component["long_name"]
+        return Location(city, state, country) if city != None else None
 
     def fetch_place(self, place_id: str, field_mask: str) -> places_v1.Place:
         """Fetches the place data that fits the fieldmask.
@@ -152,7 +146,9 @@ class Scout:
                     reviews_count=place.user_rating_count,
                     formatted_address=place.formatted_address,
                     business_url=place.website_uri,
-                    city=self.get_city(place.location.latitude, place.location.longitude)
+                    location=self.get_location(place.location.latitude, place.location.longitude),
+                    types=[t for t in place.types if t not in {"establishment", "point_of_interest", "food"}], # filter generic types
+                    primary_type=place.primary_type
                 )
             )
         return places

@@ -22,6 +22,13 @@ class Review:
     content: str
 
 @dataclass
+class Location:
+    "Holds info about where the place is located"
+    city: str
+    state: str
+    country: str
+
+@dataclass
 class Article:
     """Represents everything that is stored in the CMS"""
     title: str
@@ -36,11 +43,13 @@ class Article:
     detailed_info: str
     formatted_address: str
     business_url: str
-    city: str
+    location: Location
     sources: list[str]
     images: list[dict]
     slug: str
     timestamp: str
+    types: list[str]
+    primary_type: str
 
 @dataclass
 class PlaceData:
@@ -52,4 +61,6 @@ class PlaceData:
     reviews_count: int
     formatted_address: str
     business_url: str
-    city: str
+    location: Location
+    types: list[str]
+    primary_type: str

@@ -1,11 +1,11 @@
 # Make shared files accessible
-import sys, os
+import sys, os, json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from sqlalchemy import create_engine, text, TextClause
 from sqlalchemy.exc import SQLAlchemyError
 
-from shared.schema import PlaceData, Review, ArticleStatus
+from shared.schema import PlaceData, Review, ArticleStatus, Location
 
 # Database config
 DB_USER = os.getenv("DB_USER", "aiuser")
@@ -17,37 +17,6 @@ DB_NAME = os.getenv("DB_NAME", "aidb")
 DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 engine = create_engine(DATABASE_URL, echo=False)
 
-# Database and helper methods
-# def init_db():
-#     """Create the database if it doesn't already exist"""
-#     with engine.begin() as conn:
-#         # Create a table to store Google Places data
-#         conn.execute(text("""
-#             CREATE TABLE IF NOT EXISTS places (
-#                 id TEXT PRIMARY KEY,
-#                 name TEXT,
-#                 address TEXT,
-#                 rating REAL,
-#                 reviews_count REAL,
-#                 editorial_summary TEXT,
-#                 business_site TEXT,
-#                 city TEXT,
-#                 status INT
-#             )
-#         """))
-#         # Ensure the reviews table exists
-#         conn.execute(text("""
-#             CREATE TABLE IF NOT EXISTS reviews (
-#                 id SERIAL PRIMARY KEY,
-#                 place_id TEXT REFERENCES places(id) ON DELETE CASCADE,
-#                 author_name TEXT,
-#                 author_uri TEXT,
-#                 author_photo TEXT,
-#                 rating REAL,
-#                 publish_time TEXT,
-#                 review_text TEXT
-#             )
-#         """))
 
 def get_places(query: TextClause, params: dict) -> list[PlaceData]:
     """Returns a list of places that match the SQL query string"""
@@ -65,7 +34,9 @@ def get_places(query: TextClause, params: dict) -> list[PlaceData]:
                         reviews_count=row["reviews_count"],
                         formatted_address=row["address"],
                         business_url=row["business_site"],
-                        city=row["city"]
+                        location=Location(row["city"],row["state"],row["country"]),
+                        types=json.loads(row["types"]),
+                        primary_type=row["primary_type"]
                     )
                 )
     except SQLAlchemyError as e:
@@ -118,8 +89,8 @@ def store_places(places: list[PlaceData]):
         with engine.begin() as conn:  # Automatically commits
             for place in places:
                 conn.execute(text("""
-                    INSERT INTO places (id, name, address, rating, reviews_count, editorial_summary, business_site, city, status)
-                    VALUES (:id, :name, :address, :rating, :reviews_count, :summary, :site, :city, :status)
+                    INSERT INTO places (id, name, address, rating, reviews_count, editorial_summary, business_site, city, state, country, types, primary_type, status)
+                    VALUES (:id, :name, :address, :rating, :reviews_count, :summary, :site, :city, :state, :country, :types, :primary_type, :status)
                     ON CONFLICT (id) DO NOTHING
                 """), {
                     "id": place.place_id,
@@ -129,7 +100,11 @@ def store_places(places: list[PlaceData]):
                     "reviews_count": place.reviews_count,
                     "summary": place.general_summary,
                     "site": place.business_url,
-                    "city": place.city,
+                    "city": place.location.city,
+                    "state": place.location.state,
+                    "country": place.location.country,
+                    "types": json.dumps(place.types),
+                    "primary_type": place.primary_type,
                     "status": ArticleStatus.SCOUTED.value
                 })
     except SQLAlchemyError as e:

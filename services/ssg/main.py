@@ -16,17 +16,24 @@ STRAPI_BASE_URL = os.getenv("STRAPI_BASE_URL", "http://localhost:1337")
 STRAPI_ARTICLE_URL = f"{STRAPI_BASE_URL}/api/articles"
 TEMPLATE_PATH = "/app/template.html"
 WEBSITE_FOLDER = "/app/website"
-LAST_PROCESSED_FILE = "last_online.json"
+LAST_PROCESSED_FILE = "/opt/last_online.json" # Docker is using a volume for this to persist across builds
 STRAPI_API_KEY = os.getenv("STRAPI_API_KEY")
 STRAPI_WEBHOOK_KEY = os.getenv("STRAPI_WEBHOOK_KEY")
 
 # Create webhook endpoint
 app = Flask(__name__)
 
-# Load template
-f = open(TEMPLATE_PATH)
+# Load templates
+f = open("/app/template.html")
 template = Template(f.read())
 f.close()
+f = open("/app/state_dir_template.html")
+state_template = Template(f.read())
+f.close()
+f = open("/app/city_dir_template.html")
+city_template = Template(f.read())
+f.close()
+
 
 
 def main():
@@ -86,7 +93,6 @@ def save_last_timestamp(timestamp):
     with open(LAST_PROCESSED_FILE, "w") as file:
         json.dump({"last_timestamp": timestamp}, file)
 
-
 def fetch_articles_since(timestamp):
     articles = []
     params = {
@@ -95,24 +101,18 @@ def fetch_articles_since(timestamp):
         "populate": "*" # Fetch all relations, including images
     }
     headers = { "Authorization": f"Bearer {STRAPI_API_KEY}" }
-
-    # Send the request
     response = requests.get(STRAPI_ARTICLE_URL, headers=headers, params=params)
-
     if response.status_code == 200: # Check response
         json = response.json()
         for data in json["data"]:
             articles.append(process_article_data(data))
-
     return articles
-
 
 def recover_missed_articles():
     last_timestamp = load_last_timestamp()
     articles = fetch_articles_since(last_timestamp)
     for article in articles:
         write_article(article)
-
 
 def process_article_data(article_data: dict) -> Article:
     # Convert markdown to html
@@ -159,14 +159,17 @@ def process_article_data(article_data: dict) -> Article:
     )
     return article
 
-
 def write_article(article: Article):
     html = generate_html(article, template)
-
     with open(f"{WEBSITE_FOLDER}/{article.slug}.html", "w") as f:
         f.write(html)
         print(f"Made page {article.slug}")
         save_last_timestamp(article.timestamp)
+
+# def create_states_directory(states: list[list[dict]]):
+#     states
+
+# def create_city_directory(places: list[dict]):
 
 
 def generate_html(article: Article, template: Template) -> str:
@@ -190,7 +193,6 @@ def generate_html(article: Article, template: Template) -> str:
                 stars.append("grey")
         rev_dict["Stars"] = stars
         rl.append(rev_dict)
-    
     # Generate article html
     html_content = template.render(
         seo=article.seo_meta,

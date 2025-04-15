@@ -69,7 +69,9 @@ def main():
                 detailed_info=generated_content,
                 formatted_address=place.formatted_address,
                 business_url=place.business_url,
-                city=place.city,
+                location=place.location,
+                types=place.types,
+                primary_type=place.primary_type,
                 sources=generated_fields['sources'],
                 slug=generated_fields['slug'],
                 images=[], # populate later
@@ -88,7 +90,6 @@ def main():
             print("Done.")
         # Check again for any newly filtered places
         places_data = db.get_places_by_status(ArticleStatus.FILTERED)
-
 
 def wait_for_strapi(max_retries=3, delay=5):
     for attempt in range(max_retries):
@@ -157,7 +158,11 @@ def write_article_to_cms(article: Article, url: str):
             "DetailedInformation": article.detailed_info,
             "FormattedAddress": article.formatted_address,
             "WebsiteURL": article.business_url,
-            "City": article.city,
+            "City": article.location.city,
+            "State": article.location.state,
+            "Country": article.location.country,
+            "Types": article.types,
+            "PrimaryType": article.primary_type,
             "Sources": article.sources,
             "Images": article.images,
             "Slug": article.slug,
