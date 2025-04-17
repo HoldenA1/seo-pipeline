@@ -1,15 +1,7 @@
 """Contains helper functions to abstract away the llm"""
-
-import requests
-import json
+import requests, json, os
 from pydantic import BaseModel, Field
-
-# Make shared files accessible
-import sys
-import os
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-sys.path.append(PROJECT_ROOT)
-from shared.schema import PlaceData
+from staging.schema import PlaceData
 
 # Constants
 PERPLEXITY_AI_KEY = os.getenv("PERPLEXITY_AI_KEY")

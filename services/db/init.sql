@@ -24,3 +24,9 @@ CREATE TABLE IF NOT EXISTS reviews (
     publish_time TEXT,
     review_text TEXT
 );
+
+CREATE TABLE IF NOT EXISTS images (
+    id SERIAL PRIMARY KEY,
+    place_id TEXT REFERENCES places(id) ON DELETE CASCADE,
+    uri TEXT
+);

@@ -8,9 +8,6 @@ services:
       PERPLEXITY_AI_KEY: ${PERPLEXITY_AI_KEY}
       STRAPI_API_KEY: ${STRAPI_API_KEY}
       STRAPI_BASE_URL: ${STRAPI_BASE_URL}
-    volumes:
-      - ./shared:/app/shared
-      - shared-temp:/tmp/photos
     depends_on:
       - postgres
     networks:
@@ -27,8 +24,8 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: /secrets/service-account-key.json
       GOOGLE_MAPS_KEY: ${GOOGLE_MAPS_KEY}
       PERPLEXITY_AI_KEY: ${PERPLEXITY_AI_KEY}
+      ENV_TYPE: ${ENV_TYPE}
     volumes:
-      - ./shared:/app/shared
       - shared-temp:/tmp/photos
       - ${SERVICE_ACCOUNT_KEY_PATH}:/secrets/service-account-key.json
     networks:
@@ -42,7 +39,6 @@ services:
       STRAPI_WEBHOOK_KEY: ${STRAPI_WEBHOOK_KEY}
     volumes:
       - ./website:/app/website
-      - ./shared:/app/shared
       - ./services/ssg/last_online.json:/opt/last_online.json
     ports:
       - "8080:8080"
@@ -56,6 +52,8 @@ services:
       - "8000:80"  # Serve on localhost:8080
     volumes:
       - ./website:/usr/share/nginx/html:ro
+      - shared-temp:/usr/share/nginx/html/assets:ro
+
 
   postgres:
     image: postgres:13

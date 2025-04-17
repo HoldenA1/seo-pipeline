@@ -1,10 +1,11 @@
 """Main file for the scout service"""
 import requests, os
-import shared.database as db
-from shared.schema import Review, PlaceData, ArticleStatus, Location
+from io import BytesIO
 from google.maps import places_v1
-
+from google.cloud import storage
 import llm
+import staging.database as db
+from staging.schema import Review, PlaceData, ArticleStatus, Location
 
 # Constants
 INCLUDED_FIELDS = [
@@ -25,44 +26,61 @@ SEARCH_FIELD_MASK = ','.join(SEARCH_FIELDS)
 MAX_PHOTO_HEIGHT = 400
 MAX_PHOTO_WIDTH = 800
 GOOGLE_MAPS_KEY = os.getenv("GOOGLE_MAPS_KEY")
+ENV_TYPE = os.getenv("ENV_TYPE")
+ENV_TYPES = {"prod", "dev"}
+CLOUD_BUCKET_NAME = ""
+PHOTOS_FOLDER = "/tmp/photos"
 
 
 def main():
     """Main scout loop"""
+    if ENV_TYPE not in ENV_TYPES:
+        print(f"Invalid environment type: was \"{ENV_TYPE}\" should be one of the following {ENV_TYPES}.")
+        return
     scout = Scout()
-    searches = [("Bars", "Madison, WI")]
-    for activity, location in searches:
-        # search for new places
-        print(f"Searching for {activity} in {location}...")
-        scouted_places = scout.search_text(activity, location)
-        print(f"Found {len(scouted_places)} places from search.")
-        print("Storing places in db...")
-        db.store_places(scouted_places)
-        # filter places
-        print("Filtering places")
-        scouted_places = db.get_places_by_status(ArticleStatus.SCOUTED)
-        filtered_ids = llm.filter_places(scouted_places)
-        print(f"Filtered ids: {filtered_ids}")
-        for place in scouted_places:
-            if place.place_id in filtered_ids:
-                # good for meetups
-                scout.mark_place_as_filtered(place.place_id)
-            else:
-                # filtered by ai
-                db.update_place_status(place.place_id, ArticleStatus.REJECTED)
+    print(f"environment: {ENV_TYPE}.")
+    scouted_places = db.get_places_by_status(ArticleStatus.FILTERED)
+    print(f"Pulled {len(scouted_places)} places from db.")
+    for place in scouted_places:
+        print(f"Downloading photos for {place.place_name} with place_id {place.place_id}.")
+        scout.download_place_photos(place.place_id)
+
+    # searches = [("Bars", "New York, NY")]
+    # for activity, location in searches:
+    #     # search for new places
+    #     print(f"Searching for {activity} in {location}...")
+    #     scouted_places = scout.search_text(activity, location)
+    #     print(f"Found {len(scouted_places)} places from search.")
+    #     print("Storing places in db...")
+    #     db.store_places(scouted_places)
+    #     # filter places
+    #     print("Filtering places")
+    #     scouted_places = db.get_places_by_status(ArticleStatus.SCOUTED)
+    #     filtered_ids = llm.filter_places(scouted_places)
+    #     print(f"Filtered ids: {filtered_ids}")
+    #     for place in scouted_places:
+    #         if place.place_id in filtered_ids:
+    #             # good for meetups
+    #             scout.mark_place_as_filtered(place.place_id)
+    #         else:
+    #             # filtered by ai
+    #             db.update_place_status(place.place_id, ArticleStatus.REJECTED)
 
 
 class Scout:
 
     def __init__(self):
         self.client = places_v1.PlacesClient()
+        self.bucket = None
+        if ENV_TYPE == "prod":
+            self.bucket = storage.Client().get_bucket(CLOUD_BUCKET_NAME)
 
     def get_location(self, lat: float, lng: float) -> Location:
         if GOOGLE_MAPS_KEY == None: raise Exception('No Google Maps key found in environment.')
         url = f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lng}&key={GOOGLE_MAPS_KEY}"
         response = requests.get(url)
         results = response.json()["results"]
-        city = state = country = None
+        city = state = country = ""
         if results:
             for component in results[0]["address_components"]:
                 if "locality" in component["types"]:
@@ -71,7 +89,7 @@ class Scout:
                     state = component["long_name"]
                 elif "country" in component["types"]:
                     country = component["long_name"]
-        return Location(city, state, country) if city != None else None
+        return Location(city, state, country)
 
     def fetch_place(self, place_id: str, field_mask: str) -> places_v1.Place:
         """Fetches the place data that fits the fieldmask.
@@ -105,7 +123,7 @@ class Scout:
             )
         return reviews
 
-    def download_photo(self, photo_ref: places_v1.Photo, filename: str, photos_dir: str):
+    def download_photo(self, photo_ref: places_v1.Photo) -> bytes:
         """Downloads a photo given a photo reference."""
         request = places_v1.GetPhotoMediaRequest(
             name=f"{photo_ref.name}/media",
@@ -114,20 +132,43 @@ class Scout:
         )
         # Fetch the photo
         response = self.client.get_photo_media(request=request)
-        filename = os.path.join(photos_dir, f"{filename}.jpg")
         data = requests.get(response.photo_uri).content
-        f = open(filename,'wb') 
-        f.write(data) 
-        f.close() 
-        print(f"Downloaded photo: {response.name}")
+        return data
 
-    def download_place_photos(self, place_id: str, photos_dir: str):
+    def save_photo(self, photo_data: bytes, filename: str, place_id: str) -> str:
+        match ENV_TYPE:
+            case "dev": # Save to volume
+                filename = os.path.join(PHOTOS_FOLDER, place_id, filename)
+                f = open(filename, 'wb') 
+                f.write(photo_data) 
+                f.close()
+                return f"../assets/{place_id}/{filename}"
+            case "prod": # Upload to bucket
+                blob = self.bucket.blob(f"{place_id}/{filename}")
+                blob.upload_from_file(BytesIO(photo_data), content_type='image/jpeg')
+                blob.make_public()
+                return blob.public_url
+
+    def create_folder(self, place_id: str):
+        match ENV_TYPE:
+            case "dev":
+                place_photos_dir = os.path.join(PHOTOS_FOLDER, place_id)
+                os.makedirs(place_photos_dir, exist_ok=True)
+            case "prod":
+                # Create placeholder folder blob (optional, just for UI appearance)
+                folder_blob = self.bucket.blob(f"{place_id}/")
+                folder_blob.upload_from_string('', content_type='application/x-www-form-urlencoded;charset=UTF-8')
+
+    def download_place_photos(self, place_id: str) -> list[str]:
+        """Returns the uris of the saved images"""
         photo_references = self.fetch_photos(place_id)
-        place_photos_dir = os.path.join(photos_dir, place_id)
-        os.makedirs(place_photos_dir, exist_ok=True)
+        self.create_folder(place_id)
         # Download each photo
+        uris = []
         for idx, photo_ref in enumerate(photo_references):
-            self.download_photo(photo_ref, str(idx), place_photos_dir)
+            photo_data = self.download_photo(photo_ref)
+            uris.append(self.save_photo(photo_data, f"photo_{idx}.jpg", place_id))
+        return uris
 
     def search_text(self, activity: str, location: str) -> list[PlaceData]:
         """Searches for businesses fitting activity in the location provided"""
@@ -157,16 +198,16 @@ class Scout:
         """This function downloads the reviews and photos for the specified place
         then marks it as filtered in the database.
         """
+
         print("Getting Reviews")
         reviews = self.fetch_reviews(place_id)
         db.store_reviews(reviews, place_id)
+
         print("Fetching photos")
-        photos = self.fetch_photos(place_id)
-        for idx, photo in enumerate(photos):
-            PHOTOS_FOLDER = "/tmp/photos"
-            dir = os.path.join(PHOTOS_FOLDER, place_id)
-            os.makedirs(dir, exist_ok=True)
-            self.download_photo(photo, f"photo_{idx}", dir)
+        os.makedirs(PHOTOS_FOLDER, exist_ok=True)
+        photo_uris = self.download_place_photos(place_id)
+        db.store_images(photo_uris, place_id)
+
         db.update_place_status(place_id, ArticleStatus.FILTERED)
 
 
