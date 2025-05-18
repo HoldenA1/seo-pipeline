@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="description" content="We have tons of articles on businesses around the country. Take a look to find amazing meetup spots nearby!">
     <title>Directory of States</title>
-    <link rel="stylesheet" href="./css/directory.css">
 </head>
 <body>
     <main>
@@ -16,11 +15,12 @@
             </header>
 
             <section id="state-directory">
-            {% for state in states %}
-                    <div class="my-slides">
-                        <div class="numbertext">{{ loop.index }} / {{ loop.length }}</div>
-                        <img class="fade" src="//localhost:1337{{ image }}">
-                    </div>
+            {% for state, cities in states.items() %}
+                <div id="{{ state }}"><h2>{{ state }}</h2>
+                {% for city in cities %}
+                    <a href="./states/{{ city[1] }}">{{ city[0] }}</a>
+                {% endfor %}
+                </div>
             {% endfor %}
             </section>
     </main>

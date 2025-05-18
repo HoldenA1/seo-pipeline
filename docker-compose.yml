@@ -8,6 +8,7 @@ services:
       PERPLEXITY_AI_KEY: ${PERPLEXITY_AI_KEY}
       STRAPI_API_KEY: ${STRAPI_API_KEY}
       STRAPI_BASE_URL: ${STRAPI_BASE_URL}
+      ENV_TYPE: ${ENV_TYPE}
     depends_on:
       - postgres
     networks:
@@ -37,9 +38,9 @@ services:
       STRAPI_API_KEY: ${STRAPI_API_KEY}
       STRAPI_BASE_URL: ${STRAPI_BASE_URL}
       STRAPI_WEBHOOK_KEY: ${STRAPI_WEBHOOK_KEY}
+      ENV_TYPE: ${ENV_TYPE}
     volumes:
       - ./website:/app/website
-      - ./services/ssg/last_online.json:/opt/last_online.json
     ports:
       - "8080:8080"
     networks:
@@ -51,9 +52,8 @@ services:
     ports:
       - "8000:80"  # Serve on localhost:8080
     volumes:
-      - ./website:/usr/share/nginx/html:ro
+      - ./website:/usr/share/nginx/html/posts:ro
       - shared-temp:/usr/share/nginx/html/assets:ro
-
 
   postgres:
     image: postgres:13
@@ -65,6 +65,28 @@ services:
       - "5432:5432"
     volumes:
       - ./services/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app_network
+
+  strapi:
+    build: ./services/strapi
+    environment:
+      DATABASE_CLIENT: postgres
+      DATABASE_NAME: strapidb
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USERNAME: ${DB_USER}
+      DATABASE_PASSWORD: ${DB_PASS}
+      NODE_ENV: ${NODE_ENV}
+      APP_KEYS: ${APP_KEYS}
+      API_TOKEN_SALT: ${API_TOKEN_SALT}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT}
+    ports:
+      - "1337:1337"
+    depends_on:
+      - postgres
     networks:
       - app_network
 

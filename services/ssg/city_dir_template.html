@@ -3,84 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="description" content="{{ seo }}">
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="./css/main.css">
+    <meta name="description" content="Check out cool businesses in {{ city }}, {{ state }}">
+    <title>Directory of {{ city }}, {{ state }}</title>
 </head>
 <body>
     <main>
         <article>
-
             <header>
-                <h1>When asking yourself about something to do near me in {{ city }} with a group of friends or family, consider</h1>
-                <h1>{{ placeName }}</h1>
+                <h1>Welcome to the {{ city }}, {{ state }} directoy.</h1>
             </header>
-
-            <section id="image-gallery">
-                {% for image in images %}
-                    <div class="my-slides">
-                        <div class="numbertext">{{ loop.index }} / {{ loop.length }}</div>
-                        <img class="fade" src="//localhost:1337{{ image }}">
-                    </div>
-                {% endfor %}
-                <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
-                <a class="next" onclick="plusSlides(1)">&#10095;</a>
-            </section>
-            <script src="./js/slideshow.js"></script>
-
-            <section id="summary">
-                <h2>Why {{ placeName }} is a fun option when searching for things to do near me with friends and family</h3>
-                <p>{{ generalSummary }}</p>
-            </section>
-
-            <section id="ratings">
-                <h2>Here's what people think of {{ placeName }}</h2>
-                <p>As of recent, {{ placeName }} holds a {{ rating }}-star rating based on {{ reviewsCount }} reviews.</ratings-widget>
-                <p>{{ reviewsSummary }}</p>
-                <h3>Highlights from reviewers <span>(Most Relevant)</span></h3>
-                <div id="sample-reviews">
-                {% for item in reviews %}
-                    <review-card>
-                        <img src="{{ item.AuthorPhotoURL }}" alt="profile photo of user">
-                        <h4><a href="{{ item.AuthorProfileURL }}">{{ item.AuthorName }}</a></h4>
-                        <time datetime="{{ item.TimePublished }}"></time>
-                        <stars-widget>
-                        {% for star in item.Stars %}
-                            <span style="color: {{ star }};">&#9733;</span>
-                        {% endfor %}
-                        </stars-widget>
-                        <p>{{ item.Review }}</p>
-                    </review-card>
-                {% endfor %}
-                </div>
-            </section>
-
-            <section id="contact">
-                <h2>How to reach {{ placeName }}</h2>
-                <address>
-                    <p>{{ formattedAddress }}</p>
-                    <p>Website: <a href="{{ locationWebsite }}">{{ locationWebsite }}</a></p>
-                </address>
-                <iframe
-                    frameborder="0" style="border:0"
-                    referrerpolicy="no-referrer-when-downgrade"
-                    src="https://www.google.com/maps/embed/v1/place?key=AIzaSyA1T7aadTWQceTPGgtSVXHClUml-8hbTDc&q=place_id:{{ placeID }}"
-                    allowfullscreen>
-                </iframe>
-            </section>
-
-            <section id="activities">{{ detailedInformation }}</section>
-
-            <section id="source">
-                <h2>Don't just take our word for it. Check out these other websites for more info on the {{ placeName }}</h2>
-                <ul>
-                {% for source in sources %}
-                    <li><a href="{{ source }}">{{ source }}</a></li>
-                {% endfor %}
-                </ul>
-            </section>
-
-        </article>
     </main>
 </body>
 </html>

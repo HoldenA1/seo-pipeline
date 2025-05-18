@@ -4,15 +4,10 @@ The purpose of the author is to make calls to the LLM to generate content,
 process the content, then upload that content to the CMS
 """
 
-# Make shared files accessible
-import sys, os, time
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-sys.path.append(PROJECT_ROOT)
-
+import os, time
 import requests
-import glob
-from shared.schema import Article, ArticleStatus
-import shared.database as db
+from staging.schema import Article, ArticleStatus
+import staging.database as db
 import llm
 
 # Constants
@@ -74,15 +69,9 @@ def main():
                 primary_type=place.primary_type,
                 sources=generated_fields['sources'],
                 slug=generated_fields['slug'],
-                images=[], # populate later
+                images=db.get_images(place.place_id),
                 timestamp=None
             )
-            # Upload photos (for docker config photos are stored in volume)
-            print("Uploading photos...")
-            IMAGE_FOLDER = os.path.join("/tmp/photos", place.place_id)
-            image_paths = glob.glob(f"{IMAGE_FOLDER}/*.jpg")
-            image_ids = upload_images_to_cms(image_paths, STRAPI_MEDIA_UPLOAD_URL)
-            article.images = image_ids
             print("Uploading to CMS...")
             write_article_to_cms(article, STRAPI_ARTICLE_URL)
             # Mark as completed to avoid infinite loop
@@ -103,30 +92,6 @@ def wait_for_strapi(max_retries=3, delay=5):
             print(f"Attempt {attempt+1} failed: {e}")
         time.sleep(delay)
     raise Exception("Strapi did not become available in time.")
-
-def upload_images_to_cms(image_paths: list[str], url: str) -> list[dict]:
-    """Returns the document ids of the uploaded images"""
-    headers = { "Authorization": f"Bearer {STRAPI_API_KEY}" }
-    uploaded_image_ids = []
-    for image_path in image_paths:
-        # Open the image file in binary mode
-        files = {'files': ('image.jpg', open(image_path, 'rb'), 'image', {'uri': ''})}
-        upload_response = requests.post(url, headers=headers, files=files)
-        # Check if upload is successful
-        if upload_response.status_code == 201:
-            print(f"Image {image_path} uploaded successfully!")
-            image_data = upload_response.json()[0]  # Assuming one image is uploaded
-            uploaded_image_ids.append({"id": image_data["id"]})  # Add image ID to the list
-            try: # Delete the image after successful upload
-                os.remove(image_path)
-                print(f"Image {image_path} deleted successfully!")
-            except Exception as e:
-                print(f"Error deleting {image_path}: {e}")
-        else:
-            print(f"Failed to upload image {image_path}", upload_response.status_code, upload_response.text)
-            return None
-    return uploaded_image_ids
-
 
 def write_article_to_cms(article: Article, url: str):
     headers = {
@@ -171,7 +136,8 @@ def write_article_to_cms(article: Article, url: str):
     }
     # Send the request
     response = requests.post(url, json=data, headers=headers)
-    print(response.status_code, response.json())
+    if response.status_code != 201:
+        print(response.status_code, response.json())
 
 
 # main script entry point

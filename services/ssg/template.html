@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="description" content="{{ seo }}">
     <title>{{ title }}</title>
-    <link rel="stylesheet" href="./css/main.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;500&display=swap" rel="stylesheet">
 </head>
 <body>
     <main>
@@ -13,20 +14,20 @@
 
             <header>
                 <h1>When asking yourself about something to do near me in {{ city }} with a group of friends or family, consider</h1>
-                <h1>{{ placeName }}</h1>
+                <h1 class="place-name">{{ placeName }}</h1>
             </header>
 
             <section id="image-gallery">
                 {% for image in images %}
                     <div class="my-slides">
                         <div class="numbertext">{{ loop.index }} / {{ loop.length }}</div>
-                        <img class="fade" src="//localhost:1337{{ image }}">
+                        <img class="fade" src="{{ image }}">
                     </div>
                 {% endfor %}
                 <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
                 <a class="next" onclick="plusSlides(1)">&#10095;</a>
             </section>
-            <script src="./js/slideshow.js"></script>
+            <script src="../js/slideshow.js"></script>
 
             <section id="summary">
                 <h2>Why {{ placeName }} is a fun option when searching for things to do near me with friends and family</h3>

@@ -28,43 +28,43 @@ MAX_PHOTO_WIDTH = 800
 GOOGLE_MAPS_KEY = os.getenv("GOOGLE_MAPS_KEY")
 ENV_TYPE = os.getenv("ENV_TYPE")
 ENV_TYPES = {"prod", "dev"}
-CLOUD_BUCKET_NAME = ""
+CLOUD_BUCKET_NAME = "prod-seo-images"
 PHOTOS_FOLDER = "/tmp/photos"
 
 
 def main():
     """Main scout loop"""
+
     if ENV_TYPE not in ENV_TYPES:
         print(f"Invalid environment type: was \"{ENV_TYPE}\" should be one of the following {ENV_TYPES}.")
         return
+    
     scout = Scout()
-    print(f"environment: {ENV_TYPE}.")
-    scouted_places = db.get_places_by_status(ArticleStatus.FILTERED)
-    print(f"Pulled {len(scouted_places)} places from db.")
-    for place in scouted_places:
-        print(f"Downloading photos for {place.place_name} with place_id {place.place_id}.")
-        scout.download_place_photos(place.place_id)
 
-    # searches = [("Bars", "New York, NY")]
-    # for activity, location in searches:
-    #     # search for new places
-    #     print(f"Searching for {activity} in {location}...")
-    #     scouted_places = scout.search_text(activity, location)
-    #     print(f"Found {len(scouted_places)} places from search.")
-    #     print("Storing places in db...")
-    #     db.store_places(scouted_places)
-    #     # filter places
-    #     print("Filtering places")
-    #     scouted_places = db.get_places_by_status(ArticleStatus.SCOUTED)
-    #     filtered_ids = llm.filter_places(scouted_places)
-    #     print(f"Filtered ids: {filtered_ids}")
-    #     for place in scouted_places:
-    #         if place.place_id in filtered_ids:
-    #             # good for meetups
-    #             scout.mark_place_as_filtered(place.place_id)
-    #         else:
-    #             # filtered by ai
-    #             db.update_place_status(place.place_id, ArticleStatus.REJECTED)
+    searches = [("Bars", "Salem, MA")]
+
+    for activity, location in searches:
+
+        print(f"Searching for {activity} in {location}...")
+        scouted_places = scout.search_text(activity, location)
+        print(f"Found {len(scouted_places)} places from search.")
+
+        print("Storing places in db...")
+        db.store_places(scouted_places)
+
+        # filter places
+        print("Filtering places")
+        scouted_places = db.get_places_by_status(ArticleStatus.SCOUTED)
+        filtered_ids = llm.filter_places(scouted_places)
+        
+        print(f"Filtered ids: {filtered_ids}")
+        for place in scouted_places:
+            if place.place_id in filtered_ids:
+                # good for meetups
+                scout.mark_place_as_filtered(place.place_id)
+            else:
+                # filtered by ai
+                db.update_place_status(place.place_id, ArticleStatus.REJECTED)
 
 
 class Scout:
@@ -138,15 +138,14 @@ class Scout:
     def save_photo(self, photo_data: bytes, filename: str, place_id: str) -> str:
         match ENV_TYPE:
             case "dev": # Save to volume
-                filename = os.path.join(PHOTOS_FOLDER, place_id, filename)
-                f = open(filename, 'wb') 
+                path = os.path.join(PHOTOS_FOLDER, place_id, filename)
+                f = open(path, 'wb') 
                 f.write(photo_data) 
                 f.close()
-                return f"../assets/{place_id}/{filename}"
+                return f"{place_id}/{filename}"
             case "prod": # Upload to bucket
                 blob = self.bucket.blob(f"{place_id}/{filename}")
                 blob.upload_from_file(BytesIO(photo_data), content_type='image/jpeg')
-                blob.make_public()
                 return blob.public_url
 
     def create_folder(self, place_id: str):

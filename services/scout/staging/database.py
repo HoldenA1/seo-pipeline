@@ -1,18 +1,113 @@
 import os, json
-from sqlalchemy import create_engine, text, TextClause
+from sqlalchemy import create_engine, text, TextClause, Engine
+from google.cloud.sql.connector import Connector, IPTypes
+import pg8000
 from sqlalchemy.exc import SQLAlchemyError
 from staging.schema import PlaceData, Review, ArticleStatus, Location
 
 # Database config
 DB_USER = os.getenv("DB_USER", "aiuser")
 DB_PASS = os.getenv("DB_PASS", "aipassword")
-DB_HOST = os.getenv("DB_HOST", "postgres")
-DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "aidb")
+DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@postgres:5432/{DB_NAME}"
 
-DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-engine = create_engine(DATABASE_URL, echo=False)
+# initialize Cloud SQL Python Connector object
+connector = Connector()
 
+def connect_with_connector(db_user: str, db_pass: str, db_name: str, instance_connection_name: str) -> Engine:
+    """
+    Initializes a connection pool for a Cloud SQL instance of Postgres.
+
+    Uses the Cloud SQL Python Connector package.
+    """
+
+    ip_type = IPTypes.PUBLIC
+
+    def getconn() -> pg8000.dbapi.Connection:
+        conn: pg8000.dbapi.Connection = connector.connect(
+            instance_connection_name,
+            "pg8000",
+            user=db_user,
+            password=db_pass,
+            db=db_name,
+            ip_type=ip_type,
+        )
+        return conn
+
+    # The Cloud SQL Python Connector can be used with SQLAlchemy
+    # using the 'creator' argument to 'create_engine'
+    pool = create_engine(
+        "postgresql+pg8000://",
+        creator=getconn,
+        # [START_EXCLUDE]
+        # Pool size is the maximum number of permanent connections to keep.
+        pool_size=5,
+        # Temporarily exceeds the set pool_size if no connections are available.
+        max_overflow=2,
+        # The total number of concurrent connections for your application will be
+        # a total of pool_size and max_overflow.
+        # 'pool_timeout' is the maximum number of seconds to wait when retrieving a
+        # new connection from the pool. After the specified amount of time, an
+        # exception will be thrown.
+        pool_timeout=30,  # 30 seconds
+        # 'pool_recycle' is the maximum number of seconds a connection can persist.
+        # Connections that live longer than the specified amount of time will be
+        # re-established
+        pool_recycle=1800,  # 30 minutes
+        # [END_EXCLUDE]
+    )
+    return pool
+
+# create the engine
+engine = None
+if os.environ.get("INSTANCE_CONNECTION_NAME"):
+    engine = connect_with_connector(DB_USER, DB_PASS, DB_NAME, os.getenv("INSTANCE_CONNECTION_NAME"))
+else:
+    engine = create_engine(DATABASE_URL, echo=False)
+
+
+def init_db():
+    with engine.begin() as conn:
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS places (
+                id TEXT PRIMARY KEY,
+                name TEXT,
+                address TEXT,
+                rating REAL,
+                reviews_count REAL,
+                editorial_summary TEXT,
+                business_site TEXT,
+                city TEXT,
+                state TEXT,
+                country TEXT,
+                types TEXT,
+                primary_type TEXT,
+                status INT
+            );
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS reviews (
+                id SERIAL PRIMARY KEY,
+                place_id TEXT REFERENCES places(id) ON DELETE CASCADE,
+                author_name TEXT,
+                author_uri TEXT,
+                author_photo TEXT,
+                rating REAL,
+                publish_time TEXT,
+                review_text TEXT
+            );
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS images (
+                id SERIAL PRIMARY KEY,
+                place_id TEXT REFERENCES places(id) ON DELETE CASCADE,
+                uri TEXT
+            );
+        """))
+
+def close_db_connection():
+    """Closes the ip connection to the database. Do this before exiting a job"""
+    connector.close()
 
 def get_places(query: TextClause, params: dict) -> list[PlaceData]:
     """Returns a list of places that match the SQL query string"""
@@ -82,11 +177,11 @@ def get_images(place_id: str) -> list[str]:
     try:
         with engine.connect() as conn:
             result = conn.execute(
-                text("SELECT url FROM images WHERE place_id = :pid"),
+                text("SELECT uri FROM images WHERE place_id = :pid"),
                 {"pid": place_id}
             )
             for row in result.mappings():
-                images.append(row["url"])
+                images.append(row["uri"])
     except SQLAlchemyError as e:
         print(f"Database error: {e}")
     return images

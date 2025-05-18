@@ -4,7 +4,7 @@ import requests
 import json
 import mdformat
 from pydantic import BaseModel, Field
-import os
+import os, re
 
 # Constants
 PERPLEXITY_AI_KEY = os.getenv("PERPLEXITY_AI_KEY")
@@ -98,7 +98,7 @@ def generate_detailed_content(name: str, rating: float, review_count: int, summa
     """
     business_data = f"""Name: {name}{"\nAddress: " + address if address!=None else ""}\nRating: {rating} ({review_count} reviews){"\nWebsite: " + website if website!=None else ""}{"\nSummary: " + summary if summary!=None else ""}"""
     
-    user_prompt = f"""Write an article on the following business:\n{business_data}\n\nEnsure the response is a minimum of 1000 words, and do not stop before reaching that length. Start this section with with a paragraph (200 words) that answers the question "Why rally at this place with your friends?" Then, list out in detail what activities there are and why the place is perfect for a group meetup. Make each paragraph at least five sentences (150 words) and make section headers questions that closely match queries users might actually type. Output clean GitHub-compatible markdown."""
+    user_prompt = f"""Write an article on the following business:\n{business_data}\n\nEnsure the response is a minimum of 1000 words, and do not stop before reaching that length. Start this section with with a paragraph (200 words) that answers the question "Why rally at this place with your friends?" Then, list out in detail what activities there are and why the place is perfect for a group meetup. Make each paragraph at least five sentences (150 words) and make section headers questions that closely match queries users might actually type. Output clean GitHub-compatible markdown without in-text citations."""
 
     headers = {"Authorization": f"Bearer {PERPLEXITY_AI_KEY}"}
     payload = {
@@ -107,7 +107,7 @@ def generate_detailed_content(name: str, rating: float, review_count: int, summa
             {"role": "system", "content": ARTICLE_SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt}
         ],
-        "max_tokens": 2500,
+        "max_tokens": 3000,
     }
 
     try:
@@ -118,7 +118,7 @@ def generate_detailed_content(name: str, rating: float, review_count: int, summa
         
         if "choices" in result and result["choices"] and "message" in result["choices"][0]:
             content = result["choices"][0]["message"]["content"]
-            formatted_content = mdformat.text(content) # LLMs hate giving valid markdown ):
+            formatted_content = re.sub(r'\[\d+\]', '', mdformat.text(content)) # LLMs hate giving valid markdown ):
             return formatted_content
             
         return {"error": "Unexpected API response format", "raw_response": result}

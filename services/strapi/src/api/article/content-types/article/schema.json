@@ -1,0 +1,90 @@
+{
+  "kind": "collectionType",
+  "collectionName": "articles",
+  "info": {
+    "singularName": "article",
+    "pluralName": "articles",
+    "displayName": "Article",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "Title": {
+      "type": "string",
+      "required": true
+    },
+    "SEOMetaDescription": {
+      "type": "text",
+      "required": true
+    },
+    "SampleReviews": {
+      "type": "component",
+      "repeatable": true,
+      "component": "user-content.sample-review"
+    },
+    "PlaceName": {
+      "type": "string",
+      "required": true
+    },
+    "Rating": {
+      "type": "decimal",
+      "max": 5,
+      "min": 1
+    },
+    "PlaceID": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "Summary": {
+      "type": "richtext",
+      "required": true
+    },
+    "ReviewsCount": {
+      "type": "integer",
+      "required": true,
+      "min": 0
+    },
+    "ReviewsSummary": {
+      "type": "richtext"
+    },
+    "DetailedInformation": {
+      "type": "richtext",
+      "required": true
+    },
+    "FormattedAddress": {
+      "type": "string"
+    },
+    "WebsiteURL": {
+      "type": "string"
+    },
+    "City": {
+      "type": "string"
+    },
+    "Slug": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "Sources": {
+      "type": "json"
+    },
+    "Types": {
+      "type": "json"
+    },
+    "PrimaryType": {
+      "type": "string"
+    },
+    "State": {
+      "type": "string"
+    },
+    "Country": {
+      "type": "string"
+    },
+    "Images": {
+      "type": "json"
+    }
+  }
+}
