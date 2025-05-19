@@ -93,6 +93,7 @@ a:hover {
 article {
     max-width: var(--column-width);
     margin: auto;
+    text-align: left;
 }
 
 #image-gallery {

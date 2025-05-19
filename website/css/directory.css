@@ -1,0 +1,152 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}  
+
+body {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0px 20px;
+}
+
+h1, h2, h3 {
+    color: #0083FF;
+    font-weight: 400;
+}
+
+h1 {
+    text-align: center;
+    font-size: 2.0em;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 20px;
+    font-family: 'Poppins', sans-serif;
+    font-style: normal !important;
+}
+
+h2 {
+    margin-top: 1.5em;
+    font-size: 1.5em;
+}
+
+main {
+    text-align: left;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+    column-gap: 100px;
+    row-gap: 0px
+}
+
+.region ul {
+    columns: 2;
+    -webkit-columns: 2;
+    -moz-columns: 2;
+}
+
+#mission p {
+    margin: 1.0em 0;
+}
+
+#mission ul {
+    list-style-position: inside;
+}
+
+.searchContainer {
+    width: 100%;
+
+}
+
+input#searchInput {
+    width: 100%;       /* Take up all available width */
+    max-width: 500px;  /* But no more than 500px */
+    padding: 0.75rem 1rem;
+    margin: 1rem auto;
+    font-size: 1rem;
+    display: block;
+    border: 2px solid #ccc;
+    border-radius: 30px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    outline: none;
+    background-image: url("data:image/svg+xml,%3Csvg fill='black' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 5L20.49 19l-5-5zm-6 0C8.01 14 6 11.99 6 9.5S8.01 5 10.5 5 15 7.01 15 9.5 12.99 14 10.5 14z'/%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 20px;
+}
+
+#tagButtons {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.tagBtn {
+    background-color: #fff700;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.tags {
+    margin-top: 0.6rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.tag {
+    background-color: #fff700;
+    border: none;
+    padding: 0.3rem 0.7rem;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.8em;
+}
+
+.tagBtn:hover {
+    background-color: #ffe600;
+}
+
+ul#placeList {
+    list-style: none;
+    padding-left: 0;
+}
+
+ul#cityList {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+}
+
+.error-message {
+    color: red;
+    text-align: center;
+}
+
+.placeItem {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border-radius: 10px;
+    border: 1px solid #eee;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
+}
+
+.placeItem a {
+    text-decoration: none;
+    color: #0074ff;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.placeItem p {
+    margin: 0.5rem 0 0;
+    font-size: 0.95rem;
+    color: #444;
+}

@@ -1,28 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-9EJTZJ2BWB"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-9EJTZJ2BWB');
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="description" content="We have tons of articles on businesses around the country. Take a look to find amazing meetup spots nearby!">
-    <title>Directory of States</title>
+    <meta name="description" content="Find fun things to do near me in your city and simplify organizing with Rallyvite’s automated scheduling and availability polling via simple link for group texts.">
+    <title>Asking fun things to do near me in your city? | Rallyvite, the best group scheduling & availability polling</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="../css/directory.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/Assets/Favicon.png">
 </head>
 <body>
-    <main>
-        <article>
+    <header>
+        <div class="header">
+            <a href="/" class="logo">
+              <img src="/Assets/logo.png" alt="Shield Icon">
+            </a>
+            <a href="/About-Rallyvite.html" class="whats-special">What's Special about Rallyvite</a>
+            <a href="/Waitlist.html" class="profile-button">My Profile</a>
+        </div>
+        <h1>🗺️ Let’s Find Your City’s Fun Things to Do!</h1>
+        <p>You’ve picked {{ state }} — great choice! Now, let’s narrow it down to where the real fun happens: <strong>the city where you and your friends want to rally.</strong></p>
+    </header>
 
-            <header>
-                <h1>To find great places near you, pick the city you live in.</h1>
-            </header>
-
-            <section id="state-directory">
-            {% for state, cities in states.items() %}
-                <div id="{{ state }}"><h2>{{ state }}</h2>
-                {% for city in cities %}
-                    <a href="./states/{{ city[1] }}">{{ city[0] }}</a>
-                {% endfor %}
-                </div>
+    <main style="flex-direction: column;">
+        <div class="searchContainer">
+            <input id="searchInput" type="text" placeholder="Search your city" />
+        </div>
+        {% if cities %}
+            <ul id="cityList">
+            {% for city in cities %}
+                <li class="placeItem"><a href="../cities/{{ city | replace(' ', '-') | lower }}.html">{{ city }}</a></li>
             {% endfor %}
-            </section>
+            </ul>
+        {% else %}
+            <p class="error-message">Sorry, there aren't any cities for this state yet. Check back soon!</p>
+        {% endif %}
+        <script>
+            document.getElementById("searchInput").addEventListener("input", function () {
+                const query = this.value.toLowerCase();
+                document.querySelectorAll("#cityList li").forEach(li => {
+                    li.style.display = li.textContent.toLowerCase().includes(query) ? "" : "none";
+                });
+            });
+        </script>
+
+        <section id="mission">
+            <p>At Rallyvite, we believe that <strong>every city and town deserves to be celebrated</strong> for its unique energy, hidden gems, and community hotspots. Whether you're planning a big reunion, a birthday bash, a spontaneous game night, or just a long-overdue catch-up, we make it simple to find the perfect place to make memories.</p>
+            <p><strong>✅ Start by browsing the cities we already have covered.</strong><br>
+            Click on your city and dive into curated lists of awesome restaurants, rooftop lounges, pickleball courts, karaoke nights, board game cafés, climbing gyms, arcades, and live music venues. We've done the digging so you can get straight to the fun part: inviting your crew and making it happen.</p>
+            <p><strong>✅ Don’t see your city listed? No problem — help us out!</strong><br>
+            At Rallyvite, our goal is to cover every corner of the country — not just the major metros. If your city isn’t listed yet, <strong>you can easily suggest it</strong>. Just a quick submission and we’ll move your town to the top of our queue. The faster you flag it for us, the faster we can find the coolest spots near you! Email us at <a href="mailto:hello@rallyvite.com">hello@rallyvite.com!</a></p>
+            <p><strong>✅ Or, search for your city.</strong><br>
+            Use our search tool to find hidden gems you might not even realize are nearby. Sometimes the best venues are tucked just outside your immediate area — and a quick search can unlock a whole new set of options for your next get-together. Planning a get-together in the future in a different state? Click on the <a href="../fun-things-to-do-near-me-by-state.html">state where you want to see fun things to do and group activity ideas</a>!</p>
+            <h2>🌟 Why It Matters</h2>
+            <p>Life gets busy. It’s easy for weeks and months to slip by without getting the people you care about into the same room. That’s why we make finding places to gather <strong>easy, quick, and inspiring.</strong></p>
+            <ul><strong>Whether you’re looking for:</strong>
+                <li>A <strong>chill wine bar</strong> with outdoor seating</li>
+                <li>A <strong>family-friendly park</strong> with space for frisbee and food trucks</li>
+                <li>A <strong>high-energy axe throwing venue</strong> for your adventurous friends</li>
+                <li>A <strong>mini golf and arcade night</strong> that spans generations</li>
+                <li>Or a <strong>quiet corner coffee shop</strong> perfect for meaningful catchups</li>
+            </ul>
+            <p>We’ve got something for every vibe, every budget, and every group size — and every gathering you plan becomes part of your story. Want to organize your out-of-state friends or family for a reunion? Click on the <a href="../fun-things-to-do-near-me-by-state.html">state where you want to see fun things to do</a> with your crew and use Rallyvite to <strong>automatically find the best location, date and time</strong>!</p>
+        </section>
     </main>
+
+    <footer>
+        <a href="mailto:hello@rallyvite.com" class="email-link" style="
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        ">
+            <img src="/Assets/email.png" alt="Email Icon" style="width: 20px; height: 20px">
+            hello@rallyvite.com
+        </a>
+        <br>
+        <a href="/tos.html">Terms of Service</a> |
+        <a href="/privacy.html">Privacy Policy</a>
+    </footer>
 </body>
 </html>

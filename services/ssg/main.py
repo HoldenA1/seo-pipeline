@@ -20,6 +20,7 @@ STRAPI_WEBHOOK_KEY = os.getenv("STRAPI_WEBHOOK_KEY") # This is the key strapi us
 ENV_TYPE = os.getenv("ENV_TYPE")
 ENV_TYPES = {"prod", "dev"}
 CLOUD_BUCKET_NAME = "prod-seo-content"
+STATES = {"alaska", "arizona", "california", "colorado", "hawaii", "idaho", "montana", "nevada", "new-mexico", "oregon", "utah", "washington", "wyoming", "illinois", "indiana", "iowa", "kansas", "michigan", "minnesota", "missouri", "nebraska", "north-dakota", "ohio", "south-dakota", "wisconsin", "alabama", "arkansas", "delaware", "florida", "georgia", "kentucky", "louisiana", "maryland", "mississippi", "north-carolina", "oklahoma", "south-carolina", "tennessee", "texas", "virginia", "west-virginia", "connecticut", "maine", "massachusetts", "new-hampshire", "new-jersey", "new-york", "pennsylvania", "rhode-island", "vermont"}
 
 # Index variables
 states = {}
@@ -35,9 +36,9 @@ f.close()
 f = open("/app/state_dir_template.html")
 state_template = Template(f.read())
 f.close()
-# f = open("/app/city_dir_template.html")
-# city_template = Template(f.read())
-# f.close()
+f = open("/app/city_dir_template.html")
+city_template = Template(f.read())
+f.close()
 
 # Connect to bucket
 bucket = None
@@ -109,7 +110,7 @@ def fetch_articles_since(timestamp):
     articles = []
     params = {
         "filters[publishedAt][$gt]": timestamp,
-        "pagination[limit]": 100,
+        "pagination[limit]": 1000,
         "populate": "*" # Fetch all relations, including images
     }
     headers = { "Authorization": f"Bearer {STRAPI_API_KEY}" }
@@ -125,6 +126,9 @@ def recover_missed_articles():
     articles = fetch_articles_since(last_timestamp)
     for article in articles:
         write_article(article)
+    # Gen all state pages
+    for state in STATES:
+        generate_state_city_page(state)
 
 def process_article_data(article_data: dict) -> Article:
     # Convert markdown to html
@@ -183,17 +187,92 @@ def write_article(article: Article):
             blob = bucket.blob(f"places/articles/{article.slug}.html")
             blob.upload_from_string(data=html, content_type="text/html")
             save_last_timestamp(article.timestamp)
-    app.logger.info(f"Made page {article.slug}")
+    app.logger.info(f"Made article page for {article.slug}")
 
-def get_states() -> list:
-    return None
+def fetch_cities_for_state(state: str) -> list:
+    headers = { "Authorization": f"Bearer {STRAPI_API_KEY}" }
+    params = {
+        "filters[State][$eq]": state,
+        "pagination[limit]": 1000,  # Adjust if needed
+        "fields": ["City"],
+    }
+    response = requests.get(STRAPI_ARTICLE_URL, headers=headers, params=params)
+    cities = set()
+    if response.ok:
+        for item in response.json()["data"]:
+            cities.add(item["City"])
+    return sorted(list(cities))
 
-def generate_state_directory():
-    states = get_states()
-    html = state_template.render(states)
-    with open(f"{WEBSITE_FOLDER}/index.html", "w") as f:
-        f.write(html)
-        # save_last_timestamp(article.timestamp)
+def fetch_places_for_city(city_name: str):
+    headers = {"Authorization": f"Bearer {STRAPI_API_KEY}"}
+    params = {
+        "filters[City][$eq]": city_name,
+        "pagination[limit]": 1000,
+        "fields": ["PlaceName", "Slug", "Types"]
+    }
+    response = requests.get(STRAPI_ARTICLE_URL, headers=headers, params=params)
+    places = []
+    if response.ok:
+        for item in response.json()["data"]:
+            places.append(item)
+    return places
+
+def normalize_slug(slug: str) -> str:
+    return slug.replace("-", " ").replace("_", " ").title()
+
+def slugify(name: str) -> str:
+    return name.lower().replace(" ", "-")
+
+def generate_state_city_page(state_slug: str):
+    state_name = normalize_slug(state_slug)
+    cities = fetch_cities_for_state(state_name)
+    html = state_template.render(state=state_name, cities=cities)
+
+    # create city pages
+    for city in cities:
+        generate_city_page(city, state_slug)
+
+    match ENV_TYPE:
+        case "dev": # Save to volume
+            filepath = f"{WEBSITE_FOLDER}/fun-things-to-do-near-me-by-city/{state_slug}.html"
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            with open(filepath, "w") as f:
+                f.write(html)
+        case "prod": # Upload to bucket
+            blob = bucket.blob(f"places/fun-things-to-do-near-me-by-city/{state_slug}.html")
+            blob.upload_from_string(data=html, content_type="text/html")
+    
+    app.logger.info(f"Made state page for {state_name}")
+
+def generate_city_page(city_name: str, state_slug: str):
+    city_slug = slugify(city_name)
+    places = fetch_places_for_city(city_name)
+
+    all_tags = set()
+    for place in places:
+        tags = place.get("Types", [])
+        tags = [normalize_slug(item) for item in tags]
+        place["Types"] = tags  # ensure it's a list
+        all_tags.update(tags)
+
+    html = city_template.render(
+        city_name=city_name,
+        state=state_slug,
+        places=places,
+        all_tags=sorted(all_tags)
+    )
+
+    match ENV_TYPE:
+        case "dev": # Save to volume
+            path = f"{WEBSITE_FOLDER}/cities/{city_slug}.html"
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w") as f:
+                f.write(html)
+        case "prod": # Upload to bucket
+            blob = bucket.blob(f"places/cities/{city_slug}.html")
+            blob.upload_from_string(data=html, content_type="text/html")
+
+    app.logger.info(f"Made city page for {city_name}")
 
 def generate_html(article: Article, template: Template) -> str:
     """Creates a page based on the template"""

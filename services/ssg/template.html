@@ -1,14 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-9EJTZJ2BWB"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-9EJTZJ2BWB');
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="description" content="{{ seo }}">
     <title>{{ title }}</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/main.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/Assets/Favicon.png">
 </head>
 <body>
+    <header>
+        <div class="header">
+            <a href="/" class="logo">
+              <img src="/Assets/logo.png" alt="Shield Icon">
+            </a>
+            <a href="/About-Rallyvite.html" class="whats-special">What's Special about Rallyvite</a>
+            <a href="/Waitlist.html" class="profile-button">My Profile</a>
+        </div>
+    </header>
+
     <main>
         <article>
 
@@ -83,5 +102,20 @@
 
         </article>
     </main>
+
+    <footer>
+        <a href="mailto:hello@rallyvite.com" class="email-link" style="
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        ">
+            <img src="/Assets/email.png" alt="Email Icon" style="width: 20px; height: 20px">
+            hello@rallyvite.com
+        </a>
+        <br>
+        <a href="/tos.html">Terms of Service</a> |
+        <a href="/privacy.html">Privacy Policy</a>
+    </footer>
 </body>
 </html>

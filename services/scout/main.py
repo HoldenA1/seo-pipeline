@@ -41,7 +41,12 @@ def main():
     
     scout = Scout()
 
-    searches = [("Bars", "Salem, MA")]
+    searches = [
+        ("Bars", "La Jolla, CA"),
+        ("Restaurants", "El Cajon, CA"),
+        ("Restaurants", "Los Gatos, CA"),
+        ("Parks", "Palo Alto, CA")
+    ]
 
     for activity, location in searches:
 

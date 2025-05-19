@@ -1,17 +1,126 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-9EJTZJ2BWB"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-9EJTZJ2BWB');
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="description" content="Check out cool businesses in {{ city }}, {{ state }}">
-    <title>Directory of {{ city }}, {{ state }}</title>
+    <meta name="description" content="Find fun things to do near me in {{ city_name }} like unique restaurants, sports venues and more and simplify organizing with Rallyvite’s automated scheduling and availability polling via simple link for group texts.">
+    <title>Asking fun things to do near me in {{ city_name }}? Try Rallyvite, the best group scheduling & availability polling</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="../css/directory.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/Assets/Favicon.png">
 </head>
 <body>
-    <main>
-        <article>
-            <header>
-                <h1>Welcome to the {{ city }}, {{ state }} directoy.</h1>
-            </header>
+    <header>
+        <div class="header">
+            <a href="/" class="logo">
+              <img src="/Assets/logo.png" alt="Shield Icon">
+            </a>
+            <a href="/About-Rallyvite.html" class="whats-special">What's Special about Rallyvite</a>
+            <a href="/Waitlist.html" class="profile-button">My Profile</a>
+        </div>
+        <h1>🎯 So Many Fun Things to Do in {{ city_name }}!</h1>
+        <p>Welcome to the heart of it all! You've landed in {{ city_name }}’s collection of the best places to eat, play, celebrate, and connect — and now the fun really begins.</p>
+        <p>Here at Rallyvite, we believe that every outing, no matter how big or small, should feel <strong>effortless and exciting</strong>. That’s why we’ve gathered <strong>hundreds of restaurants, hangouts, and activities</strong> for you to explore — all in one place. Whether you're planning an epic <strong>birthday bash, a casual game night, a family field day, or a chill night out</strong>, the perfect {{ city_name }} spot is just a few clicks away.</p>
+    </header>
+
+    <main style="flex-direction: column;">
+        <div class="searchContainer">
+            <input id="searchInput" placeholder="Search activity or venue..." />
+        </div>
+        <div id="tagButtons">
+        {% for tag in all_tags %}
+            <button class="tagBtn" data-tag="{{ tag }}">{{ tag }}</button>
+        {% endfor %}
+        </div>
+
+        <ul id="placeList">
+        {% for place in places %}
+            <li class="placeItem" data-tags="{{ place.Types | join(',') | lower }}">
+                <a href="../articles/{{ place.Slug }}.html"><strong>{{ place.PlaceName }}</strong></a>
+                <div class="tags">
+                {% for tag in place.Types %}
+                    <span class="tag" data-tag="{{ tag }}">{{ tag }}</span>
+                {% endfor %}
+                </div>
+            </li>
+        {% endfor %}
+        </ul>
+
+        <script>
+            const searchInput = document.getElementById('searchInput');
+            const tagButtons = document.querySelectorAll('.tagBtn');
+            const items = document.querySelectorAll('.placeItem');
+
+            searchInput.addEventListener('input', filter);
+            tagButtons.forEach(btn => btn.addEventListener('click', () => {
+                const tag = btn.dataset.tag.toLowerCase();
+                filter(null, tag);
+            }));
+
+            function filter(_, tag = null) {
+                const query = searchInput.value.toLowerCase();
+                items.forEach(item => {
+                    const nameMatch = item.textContent.toLowerCase().includes(query);
+                    const tagMatch = !tag || item.dataset.tags.includes(tag);
+                    item.style.display = nameMatch && tagMatch ? '' : 'none';
+                });
+            }
+        </script>
+
+        <section id="mission">
+            <p><strong>✅ Want to browse and be inspired?</strong> Scroll through the categories and get ideas you might not have even thought of yet! Maybe you’ll stumble across a new rooftop bar you didn’t know existed, a climbing gym offering beginners’ nights, or a jazz club tucked away in a historic part of town. Sometimes the best memories come from the unexpected adventures — and Rallyvite makes it easy to discover them.</p>
+
+            <p><strong>✅ Already know what you’re in the mood for?</strong> Use our <strong>easy search tool</strong> to jump straight into the activities that match your vibe.<br>
+            Type in exactly what you’re craving — like “golf” — and we’ll instantly show you all the <strong>golf courses</strong> in the city, from relaxed par-3 courses perfect for beginners to full championship layouts for your competitive group outings.</p>
+            
+            <ul>You can also search for:
+                <li><strong>Karaoke bars</strong> for a sing-off showdown</li>
+                <li><strong>Pickleball courts</strong> for some friendly competition</li>
+                <li><strong>Board game cafés</strong> for laid-back laughs</li>
+                <li><strong>Live music venues</strong> to catch an open mic night</li>
+                <li><strong>Bowling alleys, axe throwing arenas, escape rooms</strong>, and much more</li>
+            </ul>
+            
+            <p>We make it easy to find whatever fits your group’s energy — whether you're feeling adventurous, chill, competitive, or creative.</p>
+            
+            <h2>🌟 Why Explore?</h2>
+            
+            <p>Even if you think you know your city inside and out, there’s always more waiting to be uncovered. Maybe a new brewery just opened last month. Maybe a new mural walk popped up. Maybe there's a secret spot that becomes your group's new favorite place to meet.</p>
+            
+            <p>When you take a few minutes to browse, you’re not just planning an event — you’re unlocking new memories, new traditions, and new favorite spots.</p>
+            
+            <p>And if you want to <strong>make it even easier</strong>, try searching by what you’re in the mood for.<br>
+            <strong>Feeling sporty?</strong> Search "soccer fields" or "rock climbing gyms."<br>
+            <strong>Feeling artsy?</strong> Search "paint-and-sip" or "pottery classes."<br>
+            <strong>Feeling indulgent?</strong> Search "chocolate cafes" or "luxury brunch spots."</p>
+            
+            <p>The possibilities are endless — and so are the good times waiting for you.</p>
+            
+            <p>Want to consider planning your get-together in a <a href="../fun-things-to-do-near-me-by-city/{{ state }}.html">nearby city, town or suburb by clicking here</a>? Or thinking further ahead to seeing your <a href="../fun-things-to-do-near-me-by-state.html">friends and family on a trip to a different state</a>, that’s easy too!</p>
+        </section>
     </main>
+
+    <footer>
+        <a href="mailto:hello@rallyvite.com" class="email-link" style="
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        ">
+            <img src="/Assets/email.png" alt="Email Icon" style="width: 20px; height: 20px">
+            hello@rallyvite.com
+        </a>
+        <br>
+        <a href="/tos.html">Terms of Service</a> |
+        <a href="/privacy.html">Privacy Policy</a>
+    </footer>
 </body>
 </html>
