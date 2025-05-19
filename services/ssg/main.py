@@ -78,6 +78,7 @@ def strapi_webhook():
         article_data = hook_data.get("entry", {})
         article = process_article_data(article_data)
         write_article(article)
+        generate_state_city_page(slugify(article.location.state))
         app.logger.info('Successfully created article page.')
 
     return jsonify({"status": "received"}), 200
